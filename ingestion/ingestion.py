@@ -9,7 +9,7 @@ from typing import List, Tuple, Dict
 import re
 from datetime import datetime
 from suql.postgresql_connection import execute_sql as execute_sql_direct
-from ingestion_tools import oracle_to_postgres_type
+from ingestion.ingestion_tools import oracle_to_postgres_type
 from io import StringIO
 import stat
 from concurrent.futures import ProcessPoolExecutor, as_completed

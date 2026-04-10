@@ -12,10 +12,9 @@ import queue
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
 
-# Add the ingestion directory to the Python path
+# Add the project directory to the Python path
 project_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(project_dir)
-sys.path.append(os.path.join(project_dir, 'ingestion'))
 
 # Now import the ingestion module
 from ingestion.ingestion import process_all_csvs
