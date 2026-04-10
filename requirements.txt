@@ -1,6 +1,6 @@
 aiocache>=0.12.3
 aiomysql>=0.2.0
--e git+https://github.com/Chainlit/chainlit.git@203b6821ef2e9697f1da8cb8ebda7ba5a9dd5be8#egg=chainlit&subdirectory=backend
+chainlit @ git+https://github.com/Chainlit/chainlit.git@203b6821ef2e9697f1da8cb8ebda7ba5a9dd5be8#subdirectory=backend
 chainlite @ git+https://github.com/stanford-oval/chainlite.git@765776e8fe4fb9d54c507934ea20267ae1bedcfb
 fastapi
 Flask>=2.3.2
@@ -17,7 +17,7 @@ openai>=1.55.3
 pandas>=2.2.2
 psutil>=6.0.0
 psycopg2>=2.9.10
-pydantic==2.9.1
+pydantic>=2.9.1
 python-dotenv>=1.0.1
 PyYAML>=6.0.2
 redis>=5.0.8
