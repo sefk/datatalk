@@ -12,13 +12,16 @@ import queue
 import traceback
 from contextlib import redirect_stdout, redirect_stderr
 
-# Add the backend directory to the Python path
-backend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend')
-sys.path.append(backend_dir)
-sys.path.append(os.path.join(backend_dir, 'ingestion'))
+# Add the ingestion directory to the Python path
+project_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(project_dir)
+sys.path.append(os.path.join(project_dir, 'ingestion'))
 
 # Now import the ingestion module
-from backend.ingestion.ingestion import process_all_csvs
+from ingestion.ingestion import process_all_csvs
+
+# Data storage directory (override with DATATALK_DATA_DIR env var)
+DATA_DIR = os.environ.get("DATATALK_DATA_DIR", os.path.join(project_dir, ".tmp", "datatalk_domains"))
 
 # Create Flask app with custom template loader
 app = Flask(__name__)
@@ -74,11 +77,11 @@ def upload():
         database_name = generate_secure_filename(database_name)
         
         # Create database-specific upload directory
-        upload_dir = f"/data1/datatalk_domains/uploads/{database_name}"
+        upload_dir = os.path.join(DATA_DIR, "uploads", database_name)
         os.makedirs(upload_dir, exist_ok=True)
         
         # Create a symbolic link for easier access
-        symlink_path = f"/data1/datatalk_domains/{database_name}"
+        symlink_path = os.path.join(DATA_DIR, database_name)
         try:
             # Remove existing symlink if it exists
             if os.path.islink(symlink_path):
@@ -146,7 +149,7 @@ def move_file_to_final_location(filename: str, temp_file_path: str, database_nam
     secure_filename = generate_secure_filename(filename)
     
     # Use the database-specific directory in /data1/datatalk_domains/uploads
-    directory = f"/data1/datatalk_domains/uploads/{database_name}"
+    directory = os.path.join(DATA_DIR, "uploads", database_name)
     
     os.makedirs(directory, exist_ok=True)
     file_location = f"{directory}/{secure_filename}"
@@ -217,13 +220,13 @@ def ingestion():
             file_paths = files
             
             # Define the upload directory for this database
-            upload_dir = f"/data1/datatalk_domains/uploads/{database_name}"
+            upload_dir = os.path.join(DATA_DIR, "uploads", database_name)
             
             # Ensure the directory exists
             os.makedirs(upload_dir, exist_ok=True)
             
             # Create a symbolic link for easier access
-            symlink_path = f"/data1/datatalk_domains/{database_name}"
+            symlink_path = os.path.join(DATA_DIR, database_name)
             try:
                 # Remove existing symlink if it exists
                 if os.path.islink(symlink_path):
