@@ -4,3 +4,4 @@ __pycache__/
 .tmp/
 *.egg-info/
 .venv/
+.claude/settings.local.json
