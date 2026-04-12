@@ -196,7 +196,60 @@ Trust is a core product value, not a nice-to-have. Users are making judgments ab
 | Response latency | <15 seconds for typical queries | Application monitoring |
 | LLM cost per query | Tracked and reported; target TBD based on budget | Cost monitoring |
 
-## 9. Open Research Questions
+## 9. Competitive Landscape
+
+Understanding the competitive landscape is essential for positioning Datatalk and making informed prioritization decisions. Users exploring campaign finance data today have several options, each with different strengths and limitations.
+
+### 9.1 Direct Competitors: Conversational Interfaces to Campaign Finance Data
+
+There are currently **no established products** that offer a natural language conversational interface specifically for U.S. campaign finance data. This represents a genuine gap in the market. Several university research projects have explored NL-to-SQL for government data (including Stanford OVAL's prior work), but none are maintained as public products with domain knowledge and ongoing data updates.
+
+Datatalk has a first-mover opportunity in the conversational campaign finance space. The risk is not being beaten by a direct competitor — it is that users find "good enough" alternatives before we reach sufficient quality.
+
+### 9.2 Existing Campaign Finance Platforms
+
+These are the tools journalists and researchers use today. They are Datatalk's primary competition for user attention, even though they are not conversational.
+
+| Product | Strengths | Weaknesses | Datatalk Differentiation |
+|---------|-----------|------------|--------------------------|
+| **[OpenSecrets]** | Best-in-class enriched data: donor lookups, industry categorization, lobbying, PAC tracking. Trusted brand among journalists. Excellent pre-built reports. | Not conversational. Requires users to know what they're looking for. Custom queries require bulk data + SQL skills. | Datatalk answers freeform questions that would require multiple OpenSecrets page navigations. If we use their data, we provide a better interface to their enrichment. |
+| **[FEC.gov][FEC]** | Authoritative primary source. Real-time filings. Complete federal data. | Notoriously difficult to use. Search is keyword-based and schema-aware. Requires understanding of filing types, committee structures, and FEC jargon. | Datatalk translates plain English into correct FEC data queries, handling jargon and entity resolution automatically. |
+| **[FollowTheMoney]** | State-level campaign finance data — an area where FEC has no coverage. Good cross-state comparisons. | Federal data is not its focus. Interface is dated. Not conversational. | Complementary, not competitive, at the federal level. Could be a future data source for state coverage. |
+| **[ProPublica Campaign Finance API][ProPublica]** | Well-structured API for developers. Clean data model. | API-only — requires programming skills. ProPublica has deprioritized some civic data tools in recent years. | Datatalk serves non-technical users that ProPublica's API cannot reach. |
+| **Newsroom-internal tools** | Major outlets (NYT, WaPo, AP) have internal campaign finance databases and tools built by their data teams. | Not public. Each newsroom builds its own. Smaller newsrooms have nothing. | Datatalk democratizes access. The journalist at a local paper gets the same analytical capability as the NYT data team. |
+
+[OpenSecrets]: https://www.opensecrets.org
+[FEC]: https://www.fec.gov
+[FollowTheMoney]: https://www.followthemoney.org
+[ProPublica]: https://projects.propublica.org/api-docs/campaign-finance/
+
+### 9.3 General-Purpose AI Tools
+
+This is arguably Datatalk's most important competitive threat. A journalist in 2026 can ask ChatGPT or Perplexity the same question they would ask Datatalk.
+
+| Product | Strengths | Weaknesses | Datatalk Differentiation |
+|---------|-----------|------------|--------------------------|
+| **ChatGPT** (with web search) | Extremely capable reasoning. Can search the web and synthesize. Most journalists already have access. | No guaranteed data provenance. May hallucinate dollar amounts. Cannot query structured FEC data. "It said so" is not a citation. | Datatalk queries authoritative structured data with source attribution. A journalist can trace an answer to a specific filing. |
+| **Perplexity AI** | Fast, cited web search. Shows sources. Good for fact-checking. | Citations are to web pages, not primary data. Cannot run SQL against FEC data. May cite secondary sources that are themselves wrong. | Datatalk queries primary data; Perplexity searches secondary sources. |
+| **Claude / Gemini with tool use** | Strong reasoning. If connected to Datatalk's MCP server, could be the best of both worlds. | Without our MCP server, has no structured access to campaign finance data. Same provenance problems as ChatGPT. | This is the BYOL opportunity. Claude + Datatalk MCP = a power-user workflow where our data is the authoritative backend. |
+
+**The "good enough" risk:** General-purpose AI tools provide *approximate* answers to many campaign finance questions. For casual users, this may be sufficient. Datatalk's competitive moat is **precision, provenance, and domain expertise** — the answer is not just plausible, it is correct, sourced, and contextualized. This moat only holds if our answer quality is demonstrably superior and our trust artifacts (source attribution, evaluation scores, methodology) make the difference visible.
+
+### 9.4 Strategic Positioning
+
+Datatalk is the only tool combining conversational natural language access with deep campaign finance domain expertise. Our key strategic implications:
+
+1. **Our primary competition is general-purpose AI, not existing finance tools.** Journalists will compare us to ChatGPT, not to FEC.gov. We must be clearly better on accuracy, sourcing, and domain context — and make that superiority visible through trust artifacts and published evaluation results.
+
+2. **OpenSecrets is a potential partner, not just a data source.** We provide a better interface to their data; they provide the enrichment that makes our answers useful. This relationship needs active management.
+
+3. **MCP is a platform play.** By exposing our data and domain knowledge via MCP, we become infrastructure that other tools build on. A journalist using Claude can connect to our MCP server and get authoritative answers within their preferred tool. This extends our reach beyond our own website.
+
+4. **The equity argument is our strongest positioning.** The NYT data team can build their own tools. A local reporter in a swing district cannot. Datatalk democratizes access to campaign finance analysis. This resonates with foundations, Stanford's mission, and press coverage.
+
+5. **Stanford affiliation is a trust asset.** In a landscape where AI answers are distrusted, "built at Stanford, evaluated by domain experts, open source, with published methodology" is a meaningful trust signal.
+
+## 10. Open Research Questions
 
 These topics require investigation before or during implementation:
 
@@ -206,3 +259,53 @@ These topics require investigation before or during implementation:
 4. **SUQL fitness:** Is SUQL still the right abstraction for NL-to-SQL, or should we evaluate alternatives?
 5. **LLM model selection:** Which models best balance cost and quality for the SQL translation layer vs. the reasoning/orchestration layer?
 6. **DIME integration:** Is licensing feasible? How does the DIME schema relate to FEC/OpenSecrets data?
+
+---
+
+## Appendix: Claude AI Review (Product Manager Perspective)
+
+*Generated 2026-04-12 by Claude Opus 4.6 in the prod-mgr agent role. Items here are suggestions for future PRD revisions, not yet incorporated into the main document.*
+
+### User journeys need concrete workflows
+
+The user table lists types and abstract needs but not end-to-end workflows. For journalists specifically: what happens between getting an answer and publishing? Do they need citation formatting, export, shareable links, print-friendly views? The journalist use case — "reporter on deadline verifies a claim about a candidate's top donors" — should be traced step by step. This gap drives UI feature decisions.
+
+### Citizen persona may be aspirational
+
+The PRD lists citizens as a target user but provides little specificity about what they do with answers. Citizens have very different trust requirements than journalists — they may not know what "FEC filing" means. If citizens are truly a target, the PRD should address assumed data literacy, whether answers need simplification, and whether there should be a guided exploration mode. If citizens are secondary to journalists and researchers, be honest about that.
+
+### Trust mechanisms need UI specifics
+
+Section 7 lists trust values but does not specify what the user sees. What does source attribution look like — a footnote, a clickable link to the FEC filing, a sidebar? What does "low confidence" look like when rendered? A confidence indicator without guidance ("low confidence — consider verifying at FEC.gov") is worse than no indicator.
+
+### Success metrics are system-only
+
+The metrics table has no user-facing measures: no usage metrics (queries per day, return users), no engagement metrics (multi-turn conversations, click-through to sources), no qualitative metrics (satisfaction, would-recommend), no adoption metrics (MCP integrations, newsrooms using the tool). The PRD should define what "successful launch" looks like in user terms.
+
+### MCP priority conflicts with MCP-first architecture
+
+The design doc makes MCP the architectural center, but the PRD lists it as P2. If MCP is truly central, deferring it means the web UI gets built without it and MCP is bolted on later. Either make a minimal MCP interface P1 (since the architecture depends on it) or acknowledge the web UI will initially bypass MCP.
+
+### Content policy and political neutrality
+
+This is a university-hosted tool about elections. The PRD should address: how the system avoids appearing politically biased, whether there are questions it should refuse ("who should I vote for?"), and how to handle bad-faith actors trying to produce misleading screenshots. Even a brief section is better than silence.
+
+### Error states and edge cases
+
+Not addressed: what the user sees when SQL generation fails, when the system is over capacity, when they ask about state races not in federal data, when they ask about very recent events not yet in the data, or when they ask political questions outside campaign finance.
+
+### OpenSecrets licensing is a top-level risk
+
+"Unclear what discussions or approvals we've had" is buried in a table footnote. If OpenSecrets does not grant permission, the v2 data story weakens considerably — FEC raw data alone is much harder to make useful.
+
+### Data freshness during election season
+
+One week is an eternity in October. The freshness target may need to vary by season. The system should always tell users when data was last updated.
+
+### Evaluator recruiting is on the critical path
+
+The evaluation system is P1, but evaluators are people, not technology. Who are they, how are they recruited, are they paid, how many do we need? This is a people problem that should be addressed in the PRD.
+
+### Accessibility
+
+The PRD targets citizens but says nothing about WCAG compliance, screen reader support, or language. Even if the answer is "English only, WCAG 2.1 AA," it should be stated.
