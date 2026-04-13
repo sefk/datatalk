@@ -17,14 +17,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Set working directory to the backend package
 WORKDIR /app/backend
 
-# Copy backend project files first for better layer caching
-COPY backend/pyproject.toml backend/uv.lock ./
+# Copy backend source and project files
+COPY backend/ ./
 
 # Install dependencies (no dev dependencies in the container)
-RUN uv sync --frozen --no-dev
-
-# Copy the backend source code
-COPY backend/ ./
+RUN uv sync --no-dev
 
 # Copy V1 agent code (needed by the query tool's V1 bridge)
 COPY agent/ /app/agent/

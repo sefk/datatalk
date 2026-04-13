@@ -2,7 +2,6 @@
 name = "datatalk-backend"
 version = "0.1.0"
 description = "Datatalk backend — MCP server, data pipelines, and evaluation system"
-readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "mcp>=1.0.0",
@@ -24,6 +23,9 @@ dev = [
 
 [project.scripts]
 datatalk-mcp = "datatalk.mcp_server.server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["datatalk"]
 
 [build-system]
 requires = ["hatchling"]
