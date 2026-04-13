@@ -22,6 +22,7 @@ import logging
 import sys
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 from datatalk.mcp_server.tools.query import QueryResult, execute_query
 
@@ -34,6 +35,16 @@ mcp = FastMCP(
         "This server provides tools for querying campaign finance data. "
         "Use the query_campaign_finance tool to ask natural language questions "
         "about campaign contributions, candidates, committees, and expenditures."
+    ),
+    transport_security=TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[
+            "127.0.0.1:*",
+            "localhost:*",
+            "[::1]:*",
+            "mcp-server:*",          # Docker Compose service name
+            "host.docker.internal:*", # Docker host access
+        ],
     ),
 )
 
