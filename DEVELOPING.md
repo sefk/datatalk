@@ -24,7 +24,7 @@ Best for: integration testing, demos, working on LibreChat configuration.
 docker compose up
 ```
 
-This starts everything: PostgreSQL, FerretDB, Redis, MeiliSearch, the MCP
+This starts everything: PostgreSQL, FerretDB, MeiliSearch, the MCP
 server, and LibreChat. Visit http://localhost:3080 for the chat UI.
 
 ### Mode 2: Docker for Infrastructure, Local Python Backend
@@ -34,7 +34,7 @@ Gives you fast reload without rebuilding a container.
 
 ```bash
 # Start infrastructure + LibreChat in Docker
-docker compose up postgres ferretdb redis meilisearch librechat
+docker compose up postgres ferretdb meilisearch librechat
 
 # In another terminal, start the MCP server locally
 cd backend
@@ -63,8 +63,8 @@ Best for: MCP server development using Claude Desktop, mcp-cli, or any other
 MCP client.
 
 ```bash
-# Start just the database and cache
-docker compose up postgres redis
+# Start just the database
+docker compose up postgres
 
 # Run the MCP server with stdio transport (default)
 cd backend
@@ -81,7 +81,6 @@ uv run python -m datatalk.mcp_server --transport sse --port 8080
 | LibreChat    | 3080  | http://localhost:3080        |
 | MCP Server   | 8080  | http://localhost:8080/sse    |
 | PostgreSQL   | 5432  |                              |
-| Redis        | 6379  |                              |
 | FerretDB     | 27017 |                              |
 | MeiliSearch  | 7700  | http://localhost:7700        |
 

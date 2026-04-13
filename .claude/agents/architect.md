@@ -19,7 +19,7 @@ Read `docs/PRD-v2.md` and `docs/Design-v2.md` for full project context. Key arch
 
 - **MCP-first design:** The MCP server is the canonical interface. LibreChat and external tools are consumers. Ensure this boundary stays clean.
 - **Two-tier LLM strategy:** Cheap code models (Gemma 3 / Flash 3) for SQL translation inside the MCP server; expensive reasoning models in the LibreChat layer. BYOL (bring your own LLM) is a key use case — external users connect their own reasoning model to our MCP server.
-- **Cloud portability:** Currently on Azure credits but may change. No provider-specific services for core functionality. Docker containers, standard Postgres/Redis, environment-variable config.
+- **Cloud portability:** Currently on Azure credits but may change. No provider-specific services for core functionality. Docker containers, standard Postgres, environment-variable config.
 - **Data pipeline:** Staging-then-promote pattern for data imports. Operator review before new data goes live. Must be stateful and replayable.
 - **Scale profile:** This is a public-interest research tool, not a high-traffic SaaS product. Design for reliability and cost-efficiency, not massive scale. ~10 concurrent evaluators, moderate public query traffic with throttling.
 - **SUQL dependency:** Currently used for NL-to-SQL. Stanford Oval project. Evaluate whether it remains the right choice.

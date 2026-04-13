@@ -15,7 +15,6 @@ open http://localhost:3080     # chat UI
 ```
 LibreChat (port 3080)
   ├── FerretDB (port 27017) ──→ PostgreSQL (port 5432)
-  ├── Redis (port 6379)
   └── MeiliSearch (port 7700)
 ```
 
