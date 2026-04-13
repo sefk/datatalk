@@ -113,13 +113,12 @@ modelSpecs:
 endpoints:
   custom:
     - name: "Ollama"
-      apiKey: "not-needed"
-      baseURL: "http://host.docker.internal:11434/v1"
+      apiKey: "ollama"
+      baseURL: "http://host.docker.internal:11434/v1/"
       models:
         default: ["qwen3:32b", "qwen3:8b", "qwen3.5:9b"]
-        fetch: true
-      titleConvo: true
-      titleModel: "qwen3:8b"
+        fetch: false
+      modelDisplayLabel: "Ollama"
 
 # -----------------------------------------------------------------------------
 # MCP Servers — tool providers for campaign finance data
