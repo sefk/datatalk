@@ -72,16 +72,16 @@ modelSpecs:
           You have access to campaign finance tools via MCP. Use them to look up
           real data before answering. Do not make up numbers.
 
-    # OpenAI alternative for users who prefer GPT
-    - name: "datatalk-openai"
-      label: "Datatalk (GPT-4o)"
+    # Local Ollama model — no API key needed
+    - name: "datatalk-local"
+      label: "Datatalk (Local Qwen)"
       description: >
-        Campaign finance explorer powered by GPT-4o.
+        Campaign finance explorer using a local Qwen model via Ollama.
+        No API key required.
       iconURL: "https://cdn.jsdelivr.net/gh/danny-avila/LibreChat@main/docs/assets/openai-logo.svg"
       preset:
-        endpoint: "openAI"
-        model: "gpt-4o"
-        temperature: 0.3
+        endpoint: "Ollama"
+        model: "qwen3:32b"
         max_tokens: 4096
         modelLabel: "Datatalk"
         greeting: |
@@ -106,6 +106,20 @@ modelSpecs:
 
           You have access to campaign finance tools via MCP. Use them to look up
           real data before answering. Do not make up numbers.
+
+# -----------------------------------------------------------------------------
+# Endpoints — LLM provider configuration
+# -----------------------------------------------------------------------------
+endpoints:
+  custom:
+    - name: "Ollama"
+      apiKey: "not-needed"
+      baseURL: "http://host.docker.internal:11434/v1"
+      models:
+        default: ["qwen3:32b", "qwen3:8b", "qwen3.5:9b"]
+        fetch: true
+      titleConvo: true
+      titleModel: "qwen3:8b"
 
 # -----------------------------------------------------------------------------
 # MCP Servers — tool providers for campaign finance data
