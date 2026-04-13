@@ -80,7 +80,7 @@ COLUMN_TYPES: dict[str, dict[str, str]] = {
         "connected_org_nm": "VARCHAR(200)",
         "cand_id": "VARCHAR(9)",
     },
-    "itcont": {
+    "indiv": {
         "cmte_id": "VARCHAR(9) NOT NULL",
         "amndt_ind": "VARCHAR(1)",
         "rpt_tp": "VARCHAR(3)",
@@ -103,7 +103,7 @@ COLUMN_TYPES: dict[str, dict[str, str]] = {
         "memo_text": "VARCHAR(100)",
         "sub_id": "BIGINT NOT NULL",
     },
-    "itpas2": {
+    "pas2": {
         "cmte_id": "VARCHAR(9) NOT NULL",
         "amndt_ind": "VARCHAR(1)",
         "rpt_tp": "VARCHAR(3)",
@@ -174,7 +174,7 @@ COLUMN_DESCRIPTIONS: dict[str, dict[str, str]] = {
         "connected_org_nm": "Connected organization name",
         "cand_id": "Candidate ID linked to the committee (when applicable)",
     },
-    "itcont": {
+    "indiv": {
         "cmte_id": "Filer identification number (committee receiving the contribution)",
         "amndt_ind": "Amendment indicator: N=New, A=Amendment, T=Termination",
         "rpt_tp": "Report type (e.g. Q1=April quarterly, 12G=pre-general)",
@@ -197,7 +197,7 @@ COLUMN_DESCRIPTIONS: dict[str, dict[str, str]] = {
         "memo_text": "Memo text providing additional transaction information",
         "sub_id": "FEC record number (unique identifier for each row)",
     },
-    "itpas2": {
+    "pas2": {
         "cmte_id": "Filer identification number (committee making the contribution)",
         "amndt_ind": "Amendment indicator: N=New, A=Amendment, T=Termination",
         "rpt_tp": "Report type",
@@ -236,8 +236,8 @@ COLUMN_DESCRIPTIONS: dict[str, dict[str, str]] = {
 TABLE_NAMES = {
     "cn": "fec_candidates",
     "cm": "fec_committees",
-    "itcont": "fec_individual_contributions",
-    "itpas2": "fec_committee_contributions",
+    "indiv": "fec_individual_contributions",
+    "pas2": "fec_committee_contributions",
     "ccl": "fec_candidate_committee_linkage",
 }
 
@@ -245,8 +245,8 @@ TABLE_NAMES = {
 PRIMARY_KEYS = {
     "cn": ["cand_id", "cand_election_yr"],
     "cm": ["cmte_id"],
-    "itcont": ["sub_id"],
-    "itpas2": ["sub_id"],
+    "indiv": ["sub_id"],
+    "pas2": ["sub_id"],
     "ccl": ["linkage_id"],
 }
 
@@ -267,7 +267,7 @@ INDEXES: dict[str, list[tuple[str, list[str]]]] = {
         ("idx_fec_committees_party", ["cmte_pty_affiliation"]),
         ("idx_fec_committees_cand", ["cand_id"]),
     ],
-    "itcont": [
+    "indiv": [
         ("idx_fec_indiv_cmte", ["cmte_id"]),
         ("idx_fec_indiv_state", ["state"]),
         ("idx_fec_indiv_date", ["transaction_dt"]),
@@ -275,7 +275,7 @@ INDEXES: dict[str, list[tuple[str, list[str]]]] = {
         ("idx_fec_indiv_employer", ["employer"]),
         ("idx_fec_indiv_zip", ["zip_code"]),
     ],
-    "itpas2": [
+    "pas2": [
         ("idx_fec_cmte_contrib_cmte", ["cmte_id"]),
         ("idx_fec_cmte_contrib_cand", ["cand_id"]),
         ("idx_fec_cmte_contrib_date", ["transaction_dt"]),
@@ -294,22 +294,16 @@ INDEXES: dict[str, list[tuple[str, list[str]]]] = {
 # ---------------------------------------------------------------------------
 
 def generate_create_table_sql(dataset: FECDataset) -> str:
-    """Generate the CREATE TABLE statement for an FEC dataset.
-
-    Includes column comments as SQL line comments for LLM schema exploration.
-    """
+    """Generate the CREATE TABLE statement for an FEC dataset."""
     table_name = TABLE_NAMES[dataset.filename]
     col_types = COLUMN_TYPES[dataset.filename]
-    col_descs = COLUMN_DESCRIPTIONS.get(dataset.filename, {})
     pk_cols = PRIMARY_KEYS[dataset.filename]
 
     lines = [f'CREATE TABLE IF NOT EXISTS "{table_name}" (']
     col_lines = []
     for col in dataset.columns:
         ctype = col_types[col]
-        desc = col_descs.get(col, "")
-        comment = f"  -- {desc}" if desc else ""
-        col_lines.append(f'    "{col}" {ctype}{comment}')
+        col_lines.append(f'    "{col}" {ctype}')
 
     # Add primary key constraint
     pk_str = ", ".join(f'"{c}"' for c in pk_cols)

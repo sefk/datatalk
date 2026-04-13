@@ -81,7 +81,7 @@ def parse_args():
         "--datasets",
         nargs="+",
         metavar="NAME",
-        help="Only process specific datasets (by filename: cn, cm, itcont, itpas2, ccl)",
+        help="Only process specific datasets (by filename: cn, cm, indiv, pas2, ccl)",
     )
     parser.add_argument(
         "--database-url",

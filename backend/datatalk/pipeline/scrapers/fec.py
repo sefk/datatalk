@@ -36,8 +36,9 @@ logger = logging.getLogger(__name__)
 DEFAULT_DATA_DIR = Path(".tmp/fec_data")
 
 # FEC bulk data base URL pattern
-# Cycle is expressed as a 2-digit year, e.g. "24" for 2023-2024.
-FEC_BULK_URL = "https://cg-519a459a-0ea3-42c2-b7bc-fa1143481f74.s3-us-gov-west-1.amazonaws.com/bulk-downloads/{cycle}/{filename}.zip"
+# Path uses the full 4-digit cycle year; filename has the 2-digit year appended.
+# E.g. /bulk-downloads/2024/cn24.zip
+FEC_BULK_URL = "https://cg-519a459a-0ea3-42c2-b7bc-fa1143481f74.s3-us-gov-west-1.amazonaws.com/bulk-downloads/{cycle}/{filename}{cycle_2d}.zip"
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +107,7 @@ COMMITTEES = FECDataset(
 
 INDIVIDUAL_CONTRIBUTIONS = FECDataset(
     name="Individual Contributions",
-    filename="itcont",
+    filename="indiv",
     description="Contributions by individuals to committees.",
     columns=[
         "cmte_id",             # Filer identification number
@@ -135,7 +136,7 @@ INDIVIDUAL_CONTRIBUTIONS = FECDataset(
 
 COMMITTEE_CONTRIBUTIONS = FECDataset(
     name="Committee Contributions to Candidates",
-    filename="itpas2",
+    filename="pas2",
     description="Contributions from committees to candidates and other committees.",
     columns=[
         "cmte_id",             # Filer identification number
@@ -229,7 +230,7 @@ def cycle_to_two_digit(cycle: int) -> str:
 def build_url(cycle: int, dataset: FECDataset) -> str:
     """Build the FEC bulk download URL for a dataset and cycle."""
     cycle_2d = cycle_to_two_digit(cycle)
-    return FEC_BULK_URL.format(cycle=cycle_2d, filename=dataset.filename)
+    return FEC_BULK_URL.format(cycle=cycle, cycle_2d=cycle_2d, filename=dataset.filename)
 
 
 def _file_md5(path: Path) -> str:
