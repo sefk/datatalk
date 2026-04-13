@@ -39,6 +39,14 @@ dependencies = [
     "urllib3>=1.26.19",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+
 [tool.uv.sources]
 chainlit = { git = "https://github.com/Chainlit/chainlit.git", subdirectory = "backend", rev = "203b6821ef2e9697f1da8cb8ebda7ba5a9dd5be8" }
 chainlite = { git = "https://github.com/stanford-oval/chainlite.git", rev = "765776e8fe4fb9d54c507934ea20267ae1bedcfb" }

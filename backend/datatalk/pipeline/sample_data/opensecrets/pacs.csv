@@ -1,0 +1,13 @@
+Cycle,PACid,PACShort,Affiliate,Ultorg,RecipID,RecipCode,FECCandID,Party,PrimCode,Source,Sensitive,IsSensitive,Active
+2024,C00012345,ActBlue,ActBlue,ActBlue,N00012345,DW,H4CA12345,D,J2100,,N,N,1
+2024,C00067890,Club for Growth,Club for Growth,Club for Growth,N00067890,RW,H4TX67890,R,J1200,,N,N,1
+2024,C00111111,Emily's List,Emily's List,Emily's List,N00098765,DL,H4CA09876,D,J2200,,N,N,1
+2024,C00222222,NRA Victory Fund,Natl Rifle Assn,Natl Rifle Assn,N00055555,RW,H4NY55555,R,Q1300,,Y,Y,1
+2024,C00333333,SEIU COPE,SEIU,Service Employees Intl Union,N00011111,DW,H4FL11111,D,P0400,,N,N,1
+2024,C00444444,Koch Industries PAC,,Koch Industries,N00022222,RW,H4OH22222,R,E1140,,N,N,1
+2024,C00555555,Planned Parenthood Votes,Planned Parenthood,Planned Parenthood Fedn of America,N00033333,DL,H4PA33333,D,J7050,,Y,Y,1
+2024,C00666666,Heritage Action,Heritage Foundation,Heritage Foundation,N00044444,RW,H4GA44444,R,J1210,,N,N,1
+2024,C00777777,League of Conservation Voters,LCV,League of Conservation Voters,N00066666,DL,H4AZ66666,D,J1500,,N,N,1
+2024,C00888888,Chamber of Commerce,US Chamber,US Chamber of Commerce,N00077777,DW,H4MI77777,R,N0000,,N,N,1
+2024,C00999999,Alphabet Inc PAC,Google,Alphabet Inc,N00012345,DW,H4CA12345,D,B5000,,N,N,1
+2024,C00101010,Goldman Sachs PAC,,Goldman Sachs,N00067890,RW,H4TX67890,R,F2100,,N,N,1
