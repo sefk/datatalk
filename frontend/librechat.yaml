@@ -120,11 +120,14 @@ mcpSettings:
 
 mcpServers:
   # Datatalk MCP Server — campaign finance query engine.
-  # This is a placeholder pointing at the backend MCP server (not yet running).
-  # The MCP server will be implemented in the backend system.
+  #
+  # Mode 1 (full Docker): uses the mcp-server container via Docker networking.
+  # Mode 2 (local dev):   uses host.docker.internal to reach the locally-running
+  #                        MCP server. Switch the URL below if running Mode 2:
+  #                        url: "http://host.docker.internal:8080/sse"
   datatalk:
     type: sse
-    url: "http://host.docker.internal:8080/sse"
+    url: "http://mcp-server:8080/sse"
     timeout: 60000
     headers:
       X-Source: "librechat"

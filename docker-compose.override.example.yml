@@ -1,0 +1,19 @@
+# Datatalk — Docker Compose Override for Mode 2 (local Python dev)
+#
+# Copy this file to docker-compose.override.yml to disable the MCP server
+# container when running the backend locally via honcho.
+#
+# Usage:
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+#   docker compose up                  # starts infra + LibreChat (no MCP container)
+#   cd backend && honcho start         # starts MCP server locally
+#
+# You also need to update frontend/librechat.yaml to point at the local MCP server:
+#   url: "http://host.docker.internal:8080/sse"
+# instead of:
+#   url: "http://mcp-server:8080/sse"
+
+services:
+  mcp-server:
+    deploy:
+      replicas: 0

@@ -1,11 +1,11 @@
 # Datatalk V2 — Local Development Stack
 #
-# Brings up the full infrastructure for LibreChat + FerretDB integration.
-# See frontend/README.md for setup instructions and notes.
+# Brings up the full stack: database, MCP server, and LibreChat.
+# See DEVELOPING.md for setup instructions and the three dev modes.
 #
 # Usage:
 #   cp .env.example .env   # then fill in your API keys
-#   docker compose up
+#   docker compose up      # Mode 1: full stack
 #
 # Visit http://localhost:3080 for the chat UI.
 
@@ -80,6 +80,41 @@ services:
       retries: 5
 
   # ---------------------------------------------------------------------------
+  # BACKEND
+  # ---------------------------------------------------------------------------
+
+  # Datatalk MCP Server — campaign finance query engine.
+  # Exposes tools via MCP over SSE for LibreChat (and any MCP client).
+  # In Mode 2 (local Python dev), either omit this service by naming
+  # services explicitly, or use docker-compose.override.yml to disable it.
+  # See DEVELOPING.md for details.
+  mcp-server:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${MCP_SERVER_PORT:-8080}:8080"
+    environment:
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-datatalk}:${POSTGRES_PASSWORD:-datatalk_dev}@postgres:5432/${POSTGRES_DB:-datatalk}"
+      REDIS_URL: "redis://redis:6379"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DATATALK_DATABASE: ${DATATALK_DATABASE:-fec}
+      DATATALK_ENGINE: ${DATATALK_ENGINE:-gpt-4o}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/sse')"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
   # FRONTEND
   # ---------------------------------------------------------------------------
 
@@ -95,6 +130,9 @@ services:
         condition: service_healthy
       meilisearch:
         condition: service_healthy
+      # Note: librechat connects to MCP server at runtime via librechat.yaml.
+      # In Mode 1 (full Docker), the mcp-server container provides it.
+      # In Mode 2 (local dev), the MCP server runs locally via honcho.
     ports:
       - "${LIBRECHAT_PORT:-3080}:3080"
     environment:

@@ -1,0 +1,40 @@
+# Datatalk MCP Server — Development Dockerfile
+#
+# Builds the Python backend and runs the MCP server with SSE transport.
+# This is for local development, not production.
+#
+# Build context should be the repo root so we can access backend/.
+#
+# Usage:
+#   docker build -f infra/docker/Dockerfile.backend -t datatalk-mcp-server .
+#   docker run -p 8080:8080 datatalk-mcp-server
+
+FROM python:3.12-slim
+
+# Install uv for fast dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Set working directory to the backend package
+WORKDIR /app/backend
+
+# Copy backend project files first for better layer caching
+COPY backend/pyproject.toml backend/uv.lock ./
+
+# Install dependencies (no dev dependencies in the container)
+RUN uv sync --frozen --no-dev
+
+# Copy the backend source code
+COPY backend/ ./
+
+# Copy V1 agent code (needed by the query tool's V1 bridge)
+COPY agent/ /app/agent/
+
+# The MCP server listens on port 8080
+EXPOSE 8080
+
+# Health check: the SSE endpoint should respond
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8080/sse')" || exit 1
+
+# Run the MCP server with SSE transport, bound to all interfaces
+CMD ["uv", "run", "python", "-m", "datatalk.mcp_server", "--transport", "sse", "--host", "0.0.0.0", "--port", "8080"]
