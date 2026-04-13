@@ -86,11 +86,12 @@ services:
     ports:
       - "${MCP_SERVER_PORT:-8080}:8080"
     environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-datatalk}:${POSTGRES_PASSWORD:-datatalk_dev}@postgres:5432/${POSTGRES_DB:-datatalk}"
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      DATATALK_DATABASE: ${DATATALK_DATABASE:-fec}
-      DATATALK_ENGINE: ${DATATALK_ENGINE:-gpt-4o}
+      # Points at Docker Postgres by default. Override in .env to use local Postgres:
+      # MCP_DATABASE_URL=postgresql://sefk@host.docker.internal/datatalk
+      DATABASE_URL: "${MCP_DATABASE_URL:-postgresql://${POSTGRES_USER:-datatalk}:${POSTGRES_PASSWORD:-datatalk_dev}@postgres:5432/${POSTGRES_DB:-datatalk}}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-not-needed}"
+      OPENAI_API_BASE: "http://host.docker.internal:11434/v1"
+      DATATALK_ENGINE: ${DATATALK_ENGINE:-qwen3:32b}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/sse')"]
       interval: 15s
@@ -137,6 +138,8 @@ services:
       # --- LLM API Keys (set in .env) ---
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_REVERSE_PROXY: "http://host.docker.internal:11434/v1"
+      OPENAI_MODELS: "qwen3:32b,qwen3:8b,qwen3.5:9b"
 
       # --- Secrets ---
       CREDS_KEY: ${CREDS_KEY:-f34be427ebb29de8d88c107a71546019685ed8b241d8f2ed00c3df97ad2566f0}
