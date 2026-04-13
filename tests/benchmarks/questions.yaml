@@ -1,0 +1,147 @@
+# Datatalk Benchmark Questions
+#
+# Curated question set for evaluating the Datatalk agent.
+# Categories:
+#   known_failures  - V1 failure cases documented in the PRD
+#   basic_working   - Simple queries that V1 should handle correctly
+#   edge_cases      - Out-of-scope, state-level, or temporal edge cases
+#   jargon          - Questions using campaign finance jargon
+#
+# Fields:
+#   id               - Unique identifier (category prefix + number)
+#   question         - The natural language question
+#   category         - One of the categories above
+#   expected_answer  - Gold-standard answer (optional; null if unknown)
+#   notes            - Why this question is interesting for evaluation
+
+questions:
+
+  # ── Known Failures (V1) ──────────────────────────────────────────────
+
+  - id: kf-01
+    question: "Who is the top fund-raiser for the upcoming California gubernatorial election?"
+    category: known_failures
+    expected_answer: null
+    notes: >
+      V1 answered "Adam Schiff" — a US Senator, not a gubernatorial candidate.
+      The system lacked knowledge that gubernatorial races are not in FEC data
+      and could not distinguish federal from state races.
+
+  - id: kf-02
+    question: "How large is Marjorie Taylor Greene's war chest?"
+    category: known_failures
+    expected_answer: null
+    notes: >
+      V1 interpreted the jargon correctly but failed to note that MTG
+      is no longer in Congress or running for office — context any
+      knowledgeable human would provide. Tests domain awareness and caveats.
+
+  - id: kf-03
+    question: "How much has the top PAC supporting the Texas governor's race raised this cycle?"
+    category: known_failures
+    expected_answer: null
+    notes: >
+      Governor's races are state-level, not covered by FEC data. The system
+      should recognize this and say so, rather than returning unrelated
+      federal PAC data.
+
+  - id: kf-04
+    question: "What is Adam Schiff's fundraising total for the governor's race?"
+    category: known_failures
+    expected_answer: null
+    notes: >
+      A more targeted variant of kf-01. Tests whether the system knows
+      Adam Schiff is a senator and not running for governor, and that
+      gubernatorial data is outside our coverage.
+
+  # ── Basic Working ────────────────────────────────────────────────────
+
+  - id: bw-01
+    question: "Who are the top donors to the 2024 presidential race?"
+    category: basic_working
+    expected_answer: null
+    notes: >
+      Straightforward query against well-populated FEC data. V1 handles
+      this type of question. Good baseline for regression testing.
+
+  - id: bw-02
+    question: "How much did ActBlue raise in the 2024 election cycle?"
+    category: basic_working
+    expected_answer: null
+    notes: >
+      ActBlue is a well-known committee. Tests basic committee lookup
+      and aggregation. Should be a simple single-table query.
+
+  - id: bw-03
+    question: "What are the top 10 PACs by total spending in 2024?"
+    category: basic_working
+    expected_answer: null
+    notes: >
+      Tests PAC-specific filtering and ranking. A common journalist query
+      that V1 should handle well.
+
+  - id: bw-04
+    question: "How much has the Democratic National Committee raised this cycle?"
+    category: basic_working
+    expected_answer: null
+    notes: >
+      Well-known party committee. Tests entity resolution for a major
+      committee name and cycle-based filtering.
+
+  # ── Edge Cases ───────────────────────────────────────────────────────
+
+  - id: ec-01
+    question: "Who should I vote for in the next election?"
+    category: edge_cases
+    expected_answer: null
+    notes: >
+      Completely out of scope — a political opinion question, not a data
+      query. The system must refuse gracefully without appearing biased.
+
+  - id: ec-02
+    question: "How much did candidates for the Florida state legislature raise in 2024?"
+    category: edge_cases
+    expected_answer: null
+    notes: >
+      State legislature races are not in FEC data. The system should
+      explain our data covers federal races only and suggest
+      FollowTheMoney or state-level sources.
+
+  - id: ec-03
+    question: "What are the latest campaign finance filings from yesterday?"
+    category: edge_cases
+    expected_answer: null
+    notes: >
+      Tests temporal awareness. Our data has a lag (up to a week per PRD
+      targets). The system should note data freshness limitations rather
+      than returning stale data as if it were current.
+
+  # ── Jargon ───────────────────────────────────────────────────────────
+
+  - id: jr-01
+    question: "Which senators have the largest war chests heading into 2026?"
+    category: jargon
+    expected_answer: null
+    notes: >
+      "War chest" = cash on hand. Tests jargon translation to the correct
+      financial metric (cash on hand, not total raised). V1 handled the
+      jargon but missed contextual caveats.
+
+  - id: jr-02
+    question: "How much dark money was spent in the 2024 Senate races?"
+    category: jargon
+    expected_answer: null
+    notes: >
+      "Dark money" = spending by organizations that do not disclose donors.
+      This is inherently hard to answer from FEC data alone since the
+      defining feature is lack of disclosure. The system should explain
+      the limitation.
+
+  - id: jr-03
+    question: "Who are the biggest bundlers for the 2024 presidential candidates?"
+    category: jargon
+    expected_answer: null
+    notes: >
+      "Bundlers" collect contributions from multiple donors. Bundler data
+      has limited FEC coverage. Tests whether the system knows the limits
+      of our data for this specific concept.
