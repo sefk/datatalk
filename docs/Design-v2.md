@@ -10,39 +10,66 @@
 
 ## 1. System Architecture
 
-Datatalk V2 is composed of five main subsystems. The MCP server is the central abstraction — both the web UI and external integrations use it.
+Datatalk V2 is composed of three systems sharing a PostgreSQL data store. LibreChat is a separate, self-contained application — we configure it but do not modify its code. Our custom code lives entirely in the Backend system.
 
 ```
-                              Code LLM              Resoning LLM                            
-                                  ▲                       ▲         
-                                  │                       │         
-                                  │                ┌──────┴────────┐
-                       ┌──────────┴──────────┐     │               │
-                       │                     │     │  Web UI       │
-                       │     MCP Server      ├────▶│  LibreChat    │
-┌────────────────┐     │ (Campaign Finance)  │     │               │
-│                │     │                     │     └───────────────┘
-│   PostgreSQL   ├────▶│  - Domain Knowledge │                      
-│   Data Store   │     │  - NL→SQL (SUQL)    │     ┌───────────────┐
-│                │     │  - Prompt Library   │     │               │
-└────────────────┘     │                     ├────►│ External LLM  │
-      ▲                │                     │     │ Other Tools   │
-      │                └────────┬────────────┘     │               │
-      │                         │  ▲               └───────────────┘
-      │                         ▼  │                                
-┌─────┴──────────┐     ┌───────────┴─────────┐                      
-│  Data Import   │     │                     │                      
-│  Pipelines     │     │  Evaluation System  │                      
-│  (FEC, OS)     │     │                     │                      
-└────────────────┘     └─────────────────────┘                      
-
+┌─────────────────────────┐  ┌────────────────────────────────────┐
+│      BACKEND            │  │          FRONTEND                  │
+│      (Python)           │  │       (Node.js / React)            │
+│                         │  │                                    │
+│  ┌───────────────────┐  │  │  ┌──────────────────────────────┐  │
+│  │  MCP Server       │◄─┼──┼──│  LibreChat                   │  │
+│  │  (campaign        │  │  │  │  - Chat UI                   │  │
+│  │   finance)        │  │  │  │  - Conversation mgmt         │  │
+│  └───────────────────┘  │  │  │  - MCP client                │  │
+│                         │  │  └──────────────────────────────┘  │
+│  ┌───────────────────┐  │  │                                    │
+│  │  Data Import      │  │  │    Reasoning LLM ▲                 │
+│  │  Pipelines        │  │  │    (Claude, GPT-4o, etc.)          │
+│  │  (FEC, OS)        │  │  │    Configured or BYOL              │
+│  └───────────────────┘  │  │                                    │
+│                         │  └──────────────────┬─────────────────┘
+│  ┌───────────────────┐  │                     │
+│  │  Evaluation       │  │                     │
+│  │  System           │  │                     │
+│  └───────────────────┘  │                     │
+│                         │                     │
+│  Code LLM ▲             │                     │
+│  (Gemma 3 / Flash 3)    │                     │
+└────────────┬────────────┘                     │
+             │                                  │
+┌────────────┼──────────────────────────────────┼─────────────────┐
+│            │            DATABASE              │                 │
+│            │                                  │                 │
+│  ┌─────────▼─────────────────┐  ┌─────────────▼─────────────┐   │
+│  │  PostgreSQL               │  │ PostgreSQL (via FerretDB) │   │
+│  │  Campaign finance data    │  │ LibreChat document store  │   │
+│  │  Evaluation tables        │  │ (conversations, users,    │   │
+│  │  Import pipeline state    │  │  presets, config)         │   │
+│  └───────────────────────────┘  └───────────────────────────┘   │
+│                                                                 │
+│  One PostgreSQL instance, two logical databases.                │
+│  Redis for caching (shared). pgvector for RAG embeddings.       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-In this diagram, a "Code LLM" is expected to be a commercially available, less capable LLM e.g. Qwen 3 or Gemma 3 / Flash 3. Reasoning LLM is a higher-cost, more capable model like Sonnet 4.5 or Opus 4.5
+*Note: A static site for project information, help docs, methodology, and evaluation results will also need to be served somewhere (e.g., GitHub Pages or a simple nginx container). Not shown in this diagram.*
+
+The three systems are:
+
+1. **Database** — PostgreSQL (shared data store). One Postgres instance serves both the campaign finance relational data (accessed directly by the Backend) and LibreChat's document store (accessed via FerretDB, a MongoDB-compatible proxy backed by Postgres). Redis provides caching for both systems.
+
+2. **Frontend** — LibreChat (Node.js/React). A self-contained open-source chat application that provides the user-facing UI, conversation management, and reasoning LLM orchestration. We configure it via `librechat.yaml` and environment variables but do not fork or modify its code. LibreChat connects to our MCP server as a tool provider.
+
+3. **Backend** — All custom Datatalk code (Python). The MCP server (campaign finance query engine), data import pipelines (FEC, OpenSecrets ETL), and evaluation system. The MCP server is the canonical interface to the data — both LibreChat and external BYOL clients consume it via the MCP protocol.
+
+In this diagram, "Code LLM" is a cheap, less capable model (e.g. Qwen 3, Gemma 3, Flash 3). "Reasoning LLM" is a higher-cost, more capable model (e.g. Sonnet 4.5, Opus 4.5).
 
 ### Design Principles
 
 - **MCP-first.** The MCP server is the canonical interface to the data. The web UI is a consumer of it, not a bypass around it. This ensures external integrations get the same quality as the website.
+- **LibreChat is a dependency, not our code.** We treat LibreChat as a configured service, like PostgreSQL. We customize its behavior through its configuration surface (YAML, env vars, system prompts), not by modifying its source. This keeps us on the LibreChat upgrade path.
+- **Clean language boundary.** Node.js on the frontend, Python on the backend. The MCP protocol (stdio or HTTP/SSE) bridges them. No cross-language dependencies.
 - **Cloud-portable.** No hard dependencies on a specific cloud provider. Use containers and standard services (Postgres, Redis) that run anywhere.
 - **Contributor-friendly.** Clear separation of concerns, standard tooling, good documentation. A new developer should be able to run the full system locally within an hour.
 - **LLM-agnostic.** The system must work with multiple LLM backends. Model-specific tuning is acceptable but not model lock-in.
@@ -60,14 +87,14 @@ In this diagram, a "Code LLM" is expected to be a commercially available, less c
 **V2 design:**
 
 ```
-┌────────────┐     ┌────────────┐     ┌──────────┐     ┌──────────┐
-│  Scrapers  │────▶│  Staging   │────▶│  Review  │────▶│Production│
-│  (per src) │     │  Tables    │     │  Queue   │     │  Tables  │
-└────────────┘     └────────────┘     └──────────┘     └──────────┘
-   FEC API            Detect             Operator          Merge
-   OpenSecrets        deltas             inspect           into
-   (future: DIME)     from last          & certify         live data
-                      import
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Scrapers    │────▶│  Staging     │────▶│  Review      │────▶│  Production  │
+│  (per src)   │     │  Tables      │     │  Queue       │     │  Tables      │
+└──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+  FEC API              Detect               Operator             Merge
+  OpenSecrets          deltas               inspect              into
+  (future: DIME)       from last            & certify            live data
+                       import
 ```
 
 **Key design decisions:**
@@ -178,32 +205,32 @@ The `answer_hint` field is a lightweight summary generated by the MCP server's c
 **Internal pipeline:**
 
 ```
-    User Question
-         │
-         ▼
-┌─────────────────────┐
-│  Domain Knowledge   │  ← Curated prompt library: political context,
-│  Augmentation       │    jargon definitions, known data gaps
-└────────┬────────────┘
-         ▼
-┌─────────────────────┐
-│  NL → SQL           │  ← Cheap, fast model (Gemma 3 / Flash 3)
-│  Translation        │    Uses SUQL for structured generation
-│  (may be multiple   │    Entity linking via existing Redis cache
-│   rounds)           │    
-└────────┬────────────┘
-         ▼
-┌─────────────────────┐
-│  SQL Execution      │  ← Read-only Postgres connection
-│  & Result Fetch     │    Auto-limiting for large result sets
-└────────┬────────────┘
-         ▼
-┌─────────────────────┐
-│  Answer Generation  │  ← Same cheap model
-│  & Contextualization│    Applies domain knowledge to interpret results
-│                     │    Adds caveats, confidence assessment
-└────────┬────────────┘
-         ▼
+      User Question
+            │
+            ▼
+┌───────────────────────┐
+│  Domain Knowledge     │  ← Curated prompt library: political context,
+│  Augmentation         │    jargon definitions, known data gaps
+└───────────┬───────────┘
+            ▼
+┌───────────────────────┐
+│  NL → SQL             │  ← Cheap, fast model (Gemma 3 / Flash 3)
+│  Translation          │    Uses SUQL for structured generation
+│  (may be multiple     │    Entity linking via existing Redis cache
+│   rounds)             │
+└───────────┬───────────┘
+            ▼
+┌───────────────────────┐
+│  SQL Execution        │  ← Read-only Postgres connection
+│  & Result Fetch       │    Auto-limiting for large result sets
+└───────────┬───────────┘
+            ▼
+┌───────────────────────┐
+│  Answer Generation    │  ← Same cheap model
+│  & Contextualization  │    Applies domain knowledge to interpret results
+│                       │    Adds caveats, confidence assessment
+└───────────┬───────────┘
+            ▼
 Structured QueryResult
 ```
 
@@ -252,18 +279,19 @@ LibreChat is an open-source chat UI that supports multiple LLM backends, convers
 **Integration architecture:**
 
 ```
-┌─────────────────────────────────────────┐   ┌───────────────────────────┐
-│  LibreChat                              │   │  Reasoning LLM            │
-│  ┌───────────────┐  ┌───────────────┐   │   │  (Claude, GPT-4o, etc.)   │
-│  │ Chat UI       │  │ Conversation  │   │   │  Configured or BYOL       │
-│  │ (React)       │  │ Management    │   │   └───────────────────────────┘
-│  └───────────────┘  └───────────────┘   │         ▲
-│                                         │         │ API calls
-│  ┌───────────────┐                      ├─────────┘
-│  │ Datatalk MCP  │                      │
-│  │ Server Plugin │                      │
-│  └───────────────┘                      │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────┐   ┌─────────────────────────┐
+│  LibreChat                           │   │  Reasoning LLM          │
+│                                      │   │  (Claude, GPT-4o, etc.) │
+│  ┌──────────────┐  ┌──────────────┐  │   │  Configured or BYOL     │
+│  │  Chat UI     │  │ Conversation │  │   └─────────────────────────┘
+│  │  (React)     │  │ Management   │  │         ▲
+│  └──────────────┘  └──────────────┘  │         │ API calls
+│                                      ├─────────┘
+│  ┌──────────────┐                    │
+│  │ Datatalk MCP │                    │
+│  │ Server Plugin│                    │
+│  └──────────────┘                    │
+└──────────────────────────────────────┘
 ```
 
 The reasoning LLM (the expensive one) lives in the LibreChat layer, orchestrating tool calls to our MCP server. This is where the two-tier LLM strategy manifests:
@@ -293,29 +321,29 @@ The reasoning LLM (the expensive one) lives in the LibreChat layer, orchestratin
 The evaluation system is a separate web application. It reads from the same database as the main system but writes to evaluation-specific tables.
 
 ```
-┌─────────────────────────────────────┐
-│  Evaluation Web App                 │
-│  (Django admin-style interface)     │
-│                                     │
-│  ┌─────────┐  ┌──────────────────┐  │
-│  │Question │  │  Rating &        │  │
-│  │Browser  │  │  Annotation UI   │  │
-│  └────┬────┘  └────────┬─────────┘  │
-│       │                │            │
-│  ┌────▼────────────────▼─────────┐  │
-│  │  Evaluation Database Tables   │  │
-│  │  eval_questions               │  │
-│  │  eval_runs                    │  │
-│  │  eval_ratings                 │  │
-│  │  eval_annotations             │  │
-│  └───────────────────────────────┘  │
-│                                     │
-│  ┌───────────────────────────────┐  │
-│  │  Reporting Dashboard          │  │
-│  │  Aggregate metrics over time  │  │
-│  │  Regression detection         │  │
-│  └───────────────────────────────┘  │
-└─────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│  Evaluation Web App                   │
+│  (Django admin-style interface)       │
+│                                       │
+│  ┌──────────────┐  ┌──────────────┐   │
+│  │  Question    │  │  Rating &    │   │
+│  │  Browser     │  │  Annotation  │   │
+│  └──────┬───────┘  └──────┬───────┘   │
+│         │                 │           │
+│  ┌──────▼─────────────────▼────────┐  │
+│  │  Evaluation Database Tables     │  │
+│  │  eval_questions                 │  │
+│  │  eval_runs                      │  │
+│  │  eval_ratings                   │  │
+│  │  eval_annotations               │  │
+│  └─────────────────────────────────┘  │
+│                                       │
+│  ┌─────────────────────────────────┐  │
+│  │  Reporting Dashboard            │  │
+│  │  Aggregate metrics over time    │  │
+│  │  Regression detection           │  │
+│  └─────────────────────────────────┘  │
+└───────────────────────────────────────┘
 ```
 
 **Evaluation workflow (draft — subject to research):**
@@ -343,24 +371,45 @@ The evaluation system is a separate web application. It reads from the same data
 
 ## 3. Technology Stack
 
+### Language Split
+
+The three-system architecture creates a clean language boundary:
+
+| System | Language | Rationale |
+|--------|----------|-----------|
+| **Frontend (LibreChat)** | Node.js 20 / React 18 / TypeScript | LibreChat's native stack. We do not modify it. |
+| **Backend (MCP server, pipelines, eval)** | Python 3.12+ | Team expertise; rich ML/LLM ecosystem; V1 continuity |
+| **Database** | SQL (PostgreSQL) | Standard |
+
+There is no need for Python on the frontend side (LibreChat is self-contained) or Node.js on the backend side (MCP protocol is language-agnostic). The only shared surface between frontend and backend is the MCP protocol and the `librechat.yaml` configuration file.
+
+### Full Stack
+
 | Layer | Choice | Rationale |
 |-------|--------|-----------|
-| **Language** | Python 3.12+ | Team expertise; rich ML/LLM ecosystem; V1 continuity |
-| **Web framework** | Django | Team familiarity; built-in admin, auth, ORM; good fit for evaluation app and data import management |
 | **Chat UI** | LibreChat | Proven MCP support; conversation management; auth built-in |
-| **Database** | PostgreSQL | Relational workload; SUQL compatibility; managed service on all clouds |
-| **Cache** | Redis | Entity linking cache (V1 continuity); session cache |
-| **NL→SQL** | SUQL | V1 continuity; Stanford Oval integration; under evaluation |
+| **Backend language** | Python 3.12+ | Team expertise; rich ML/LLM ecosystem; V1 continuity |
+| **Backend framework** | FastAPI or Django (see §8.9) | Eval app UI, pipeline management |
+| **Database** | PostgreSQL 15+ | Relational workload; SUQL compatibility; managed service on all clouds |
+| **LibreChat data store** | FerretDB 2.x → PostgreSQL | MongoDB-compatible proxy backed by Postgres; avoids a second database technology |
+| **Cache** | Redis | Entity linking cache (V1 continuity); LibreChat session cache; shared |
+| **Vector search** | pgvector (PostgreSQL extension) | LibreChat RAG features; potential future use for domain knowledge retrieval |
+| **NL→SQL** | SUQL | V1 continuity; Stanford Oval integration; under evaluation (see §8.2) |
 | **LLM (SQL layer)** | Gemma 3 / Gemini Flash 3 | Low cost; non-reasoning; swappable via config |
 | **LLM (reasoning)** | Configurable (Claude, GPT-4o, etc.) | Runs in LibreChat; user can bring their own |
 | **LLM abstraction** | litellm | Multi-provider support; cost tracking (V1 continuity) |
 | **MCP framework** | Python MCP SDK | Standard protocol implementation |
 | **Containers** | Docker + Docker Compose | Cloud-portable; reproducible dev environment |
-| **Package manager** | uv | Fast, modern Python tooling (V1 continuity) |
+| **Package manager (Python)** | uv | Fast, modern Python tooling (V1 continuity) |
+| **Package manager (Node)** | npm (LibreChat's default) | We do not manage LibreChat's dependencies directly |
 
 ### Python version note
 
 V1 targets Python 3.14 (set in `.python-version`). For V2 we should target the latest stable release at development time (likely 3.12 or 3.13) rather than a pre-release version, to maximize library compatibility.
+
+### FerretDB note
+
+FerretDB 2.0 (GA March 2025) uses the DocumentDB PostgreSQL extension from Microsoft to store MongoDB-compatible documents in PostgreSQL. It has been specifically tested with LibreChat and works as a drop-in replacement — swap the `MONGO_URI` to point at FerretDB, no LibreChat code changes required. This lets us run a single database technology (PostgreSQL) while keeping LibreChat happy. The trade-off: FerretDB is a young project (v2.0) and adds an intermediary layer. If it proves unreliable, the fallback is running a separate MongoDB instance alongside Postgres — operationally messier but straightforward.
 
 ---
 
@@ -386,32 +435,52 @@ The project's cloud provider may change as funding evolves. To avoid lock-in:
 
 ### 4.3 Deployment Architecture (Production)
 
+The three systems deploy as separate container groups behind a shared reverse proxy.
+
 ```
-┌─────────────────────────────────────────────────┐
-│  Reverse Proxy / Load Balancer                  │
-│  (nginx or cloud LB)                            │
-│  - TLS termination                              │
-│  - Rate limiting (unauthenticated users)        │
-│  - Static asset serving                         │
-└──────────┬──────────────┬───────────────────────┘
-           │              │
-    ┌──────▼──────┐ ┌─────▼──────┐
-    │  LibreChat  │ │  Eval App  │
-    │  (chat UI)  │ │  (Django)  │
-    │  Port 3080  │ │  Port 8000 │
-    └──────┬──────┘ └─────┬──────┘
-           │              │
-    ┌──────▼──────────────▼──────┐
-    │  MCP Server                │
-    │  (Campaign Finance)        │
-    │  Port 8080                 │
-    └──────┬─────────────────────┘
-           │
-    ┌──────▼──────┐  ┌──────────┐
-    │  PostgreSQL │  │  Redis   │
-    │  (managed)  │  │ (managed)│
-    └─────────────┘  └──────────┘
+┌────────────────────────────────────────────────────────────────┐
+│  Reverse Proxy / Load Balancer                                 │
+│  (nginx or cloud LB)                                           │
+│  - TLS termination                                             │
+│  - Rate limiting (unauthenticated users)                       │
+│  - Route: /       → LibreChat (port 3080)                      │
+│  - Route: /eval/  → Eval App (port 8000)                       │
+│  - Route: /mcp/   → MCP Server (port 8080, if HTTP)            │
+└──────┬─────────────────────┬─────────────────────┬─────────────┘
+       │                     │                     │
+┌──────▼──────────────┐ ┌────▼──────────────┐ ┌────▼──────────────┐
+│  FRONTEND           │ │  BACKEND          │ │  BACKEND          │
+│                     │ │                   │ │                   │
+│  LibreChat          │ │  MCP Server       │ │  Eval App         │
+│  (Node.js)          │ │  (Python)         │ │  (Python)         │
+│  Port 3080          │ │  Port 8080        │ │  Port 8000        │
+│                     │ │                   │ │                   │
+│  + FerretDB         │ │                   │ │                   │
+│  + MeiliSearch      │ │                   │ │                   │
+└──────┬──────────────┘ └────────┬──────────┘ └────────┬──────────┘
+       │                         │                     │
+┌──────▼─────────────────────────▼─────────────────────▼──────────┐
+│  DATABASE TIER                                                  │
+│                                                                 │
+│  ┌─────────────────────┐  ┌─────────────────────┐               │
+│  │  PostgreSQL         │  │  Redis              │               │
+│  │  (managed)          │  │  (managed)          │               │
+│  │                     │  │                     │               │
+│  │  - campaign finance │  └─────────────────────┘               │
+│  │  - eval tables      │                                        │
+│  │  - FerretDB docs    │                                        │
+│  │  - pgvector (RAG)   │                                        │
+│  └─────────────────────┘                                        │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+**Backend pipeline workers** (data import scrapers, benchmark runners) run as scheduled jobs (cron or container-based task scheduler), not as long-running services. They connect directly to PostgreSQL.
+
+**Scaling notes:**
+- LibreChat and the MCP server can be horizontally scaled behind the load balancer independently.
+- FerretDB runs as a sidecar alongside LibreChat — it is stateless (just a protocol translator to Postgres).
+- The eval app has low traffic (~10 concurrent evaluators) and does not need horizontal scaling.
+- PostgreSQL read replicas can be added if read load grows, but this is unlikely at our scale.
 
 ### 4.4 Reliability & Operations
 
@@ -445,77 +514,150 @@ Two cost categories require active monitoring:
 
 ### 5.1 Local Development
 
+There are two development modes, depending on what you are working on.
+
+#### Mode 1: Full stack via Docker (default for most developers)
+
+Brings up all three systems in containers. Best for integration testing, demo, or working on LibreChat configuration.
+
 ```bash
 # Clone and setup
 git clone <repo>
 cd datatalk
-cp .env.example .env  # Configure API keys
+cp .env.example .env            # Configure API keys, LLM endpoints
 
-# Start all services
+# Start everything
 docker compose up
+```
 
-# Run just the MCP server for development
+This starts:
+- **PostgreSQL** (port 5432) — campaign finance data + FerretDB backend
+- **FerretDB** (port 27017) — MongoDB-compatible proxy for LibreChat
+- **Redis** (port 6379) — shared cache
+- **MeiliSearch** (port 7700) — LibreChat conversation search
+- **LibreChat** (port 3080) — chat UI, configured to use our MCP server
+- **MCP Server** (port 8080) — campaign finance query engine
+- **Eval App** (port 8000) — evaluation interface
+
+Visit `http://localhost:3080` for the chat UI, `http://localhost:8000` for the eval app.
+
+#### Mode 2: Docker for infrastructure, honcho for backend (for active Python development)
+
+When iterating on the MCP server, pipelines, or eval app, run the infrastructure in Docker but the Python services locally for fast reload.
+
+```bash
+# Start infrastructure + LibreChat only
+docker compose up postgres ferretdb redis meilisearch librechat
+
+# In another terminal: start backend Python services
+cd backend
+honcho start
+```
+
+The `Procfile` defines:
+
+```
+mcp: uv run python -m datatalk.mcp_server
+eval: uv run python -m datatalk.evaluation.server
+```
+
+LibreChat's `librechat.yaml` is configured to connect to the MCP server at `localhost:8080`, which works whether the MCP server runs in Docker or locally.
+
+#### Mode 3: Backend only (for MCP server development without LibreChat)
+
+For pure MCP server development, you can skip LibreChat entirely and test with any MCP client (Claude Desktop, mcp-cli, etc.).
+
+```bash
+# Start just the database
+docker compose up postgres redis
+
+# Run MCP server
+cd backend
 uv run python -m datatalk.mcp_server
+```
 
-# Run evaluation app
-uv run python manage.py runserver
+#### Sample data
+
+A seed script loads representative campaign finance data into the local Postgres instance:
+
+```bash
+cd backend
+uv run python scripts/seed_data.py
 ```
 
 Goal: a new developer runs the full stack in under an hour, including sample data.
 
 ### 5.2 Project Structure (Proposed)
 
+The monorepo is organized so each system can be managed and deployed independently. LibreChat is not checked in — it is pulled as a Docker image.
+
 ```
 datatalk/
-├── docker-compose.yml        # Full local stack
-├── pyproject.toml
+├── docker-compose.yml          # Full local stack (all three systems)
+├── docker-compose.override.yml # Developer-specific overrides (gitignored)
+├── Procfile                    # honcho: starts backend Python services
 ├── README.md
 │
 ├── docs/
 │   ├── PRD-v2.md
 │   └── Design-v2.md
 │
-├── datatalk/                 # Main Python package
-│   ├── mcp_server/           # MCP server implementation
-│   │   ├── server.py         # MCP tool definitions
-│   │   ├── tools/            # Tool implementations
-│   │   └── prompts/          # Domain knowledge prompt library
+├── backend/                    # All custom Python code
+│   ├── pyproject.toml          # Python project config (uv)
+│   ├── uv.lock
 │   │
-│   ├── pipeline/             # Data import pipelines
-│   │   ├── scrapers/         # Per-source scrapers (fec.py, opensecrets.py)
-│   │   ├── staging.py        # Staging table management
-│   │   └── certification.py  # Review/promote workflow
+│   ├── datatalk/               # Main Python package
+│   │   ├── mcp_server/         # MCP server implementation
+│   │   │   ├── server.py       # MCP tool definitions
+│   │   │   ├── tools/          # Tool implementations
+│   │   │   └── prompts/        # Domain knowledge prompt library
+│   │   │
+│   │   ├── pipeline/           # Data import pipelines
+│   │   │   ├── scrapers/       # Per-source scrapers (fec.py, opensecrets.py)
+│   │   │   ├── staging.py      # Staging table management
+│   │   │   └── certification.py # Review/promote workflow
+│   │   │
+│   │   ├── nlsql/              # NL→SQL engine
+│   │   │   ├── translator.py   # SUQL-based translation
+│   │   │   ├── entity_linking.py # Entity resolution
+│   │   │   └── executor.py     # SQL execution and result formatting
+│   │   │
+│   │   └── evaluation/         # Evaluation app
+│   │       ├── models.py       # Eval data models
+│   │       ├── views.py        # Evaluator-facing views
+│   │       └── reporting.py    # Metrics and public trust artifacts
 │   │
-│   ├── nlsql/                # NL→SQL engine
-│   │   ├── translator.py     # SUQL-based translation
-│   │   ├── entity_linking.py # Entity resolution
-│   │   └── executor.py       # SQL execution and result formatting
-│   │
-│   └── evaluation/           # Evaluation Django app
-│       ├── models.py         # Eval data models
-│       ├── views.py          # Evaluator-facing views
-│       └── reporting.py      # Metrics and public trust artifacts
+│   └── tests/
+│       ├── test_mcp_tools.py
+│       ├── test_pipeline.py
+│       ├── test_nlsql.py
+│       └── benchmarks/         # Evaluation benchmark question sets
 │
-├── librechat/                # LibreChat configuration and customization
-│   ├── librechat.yaml        # LibreChat config
-│   └── custom/               # Branding, landing page, system prompts
+├── frontend/                   # LibreChat configuration (not source)
+│   ├── librechat.yaml          # LibreChat config (MCP servers, endpoints)
+│   ├── system-prompt.md        # Default system prompt for campaign finance
+│   └── custom/                 # Branding, landing page overrides
 │
-├── tests/
-│   ├── test_mcp_tools.py
-│   ├── test_pipeline.py
-│   ├── test_nlsql.py
-│   └── benchmarks/           # Evaluation benchmark question sets
-│
-├── scripts/                  # Operational scripts
+├── scripts/                    # Operational scripts
 │   ├── import_fec.py
 │   ├── import_opensecrets.py
 │   └── run_benchmark.py
 │
-└── infra/                    # Infrastructure as code
-    ├── docker/               # Dockerfiles per service
-    ├── terraform/            # Cloud infrastructure (when ready)
-    └── nginx/                # Reverse proxy config
+└── infra/                      # Infrastructure and deployment
+    ├── docker/
+    │   ├── Dockerfile.backend  # Python backend services
+    │   ├── Dockerfile.mcp      # MCP server (if deployed separately)
+    │   └── ferretdb.conf       # FerretDB configuration
+    ├── terraform/              # Cloud infrastructure (when ready)
+    └── nginx/                  # Reverse proxy config
 ```
+
+**Key decisions in this layout:**
+
+- **LibreChat is not in the repo.** It is consumed as a Docker image. The `frontend/` directory contains only our configuration files that get mounted into the LibreChat container. This keeps us on LibreChat's release train without maintaining a fork.
+- **`backend/` is a self-contained Python project.** It has its own `pyproject.toml` and can be developed, tested, and deployed independently.
+- **`docker-compose.yml` defines the full stack** including LibreChat, FerretDB, PostgreSQL, Redis, MeiliSearch, and our backend services. A developer can bring up everything with a single command.
+- **`Procfile` is for backend-only development.** When iterating on Python code, developers run LibreChat + infrastructure via Docker but run the Python services locally via `honcho start` for fast iteration.
 
 ### 5.3 Release Process
 
