@@ -1,0 +1,142 @@
+# Datatalk V2 — Local Development Stack
+#
+# Brings up the full infrastructure for LibreChat + FerretDB integration.
+# See frontend/README.md for setup instructions and notes.
+#
+# Usage:
+#   cp .env.example .env   # then fill in your API keys
+#   docker compose up
+#
+# Visit http://localhost:3080 for the chat UI.
+
+services:
+  # ---------------------------------------------------------------------------
+  # DATABASE TIER
+  # ---------------------------------------------------------------------------
+
+  # PostgreSQL 17 with DocumentDB extension (required by FerretDB 2.x).
+  # This single instance serves both:
+  #   - Campaign finance relational data (direct SQL access)
+  #   - LibreChat document store (via FerretDB's MongoDB-compatible proxy)
+  postgres:
+    image: ghcr.io/ferretdb/postgres-documentdb:17-0.107.0-ferretdb-2.7.0
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-datatalk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-datatalk_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-datatalk}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-datatalk}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # FerretDB 2.x — MongoDB-compatible proxy backed by PostgreSQL.
+  # LibreChat connects here as if it were MongoDB.
+  ferretdb:
+    image: ghcr.io/ferretdb/ferretdb:2.7.0
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${FERRETDB_PORT:-27017}:27017"
+    environment:
+      FERRETDB_POSTGRESQL_URL: postgres://${POSTGRES_USER:-datatalk}:${POSTGRES_PASSWORD:-datatalk_dev}@postgres:5432/${POSTGRES_DB:-datatalk}
+
+  # Redis — session cache, rate limiting, general caching.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MeiliSearch — full-text search for LibreChat conversations.
+  meilisearch:
+    image: getmeili/meilisearch:v1.35.1
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-datatalk_meili_dev_key}
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "${MEILI_PORT:-7700}:7700"
+    volumes:
+      - meilisearch_data:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # FRONTEND
+  # ---------------------------------------------------------------------------
+
+  # LibreChat — chat UI, conversation management, LLM orchestration.
+  # Configured via librechat.yaml (mounted) and environment variables.
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    restart: unless-stopped
+    depends_on:
+      ferretdb:
+        condition: service_started
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    ports:
+      - "${LIBRECHAT_PORT:-3080}:3080"
+    environment:
+      # --- Core ---
+      HOST: "0.0.0.0"
+      PORT: "3080"
+      ALLOW_REGISTRATION: "true"
+      ALLOW_SOCIAL_LOGIN: "false"
+
+      # --- MongoDB (via FerretDB) ---
+      # FerretDB speaks the MongoDB wire protocol; LibreChat doesn't know the
+      # difference. The URI points at the ferretdb container on port 27017.
+      MONGO_URI: "mongodb://${POSTGRES_USER:-datatalk}:${POSTGRES_PASSWORD:-datatalk_dev}@ferretdb:27017/librechat?authMechanism=PLAIN"
+
+      # --- Redis ---
+      USE_REDIS: "true"
+      REDIS_URI: "redis://redis:6379"
+
+      # --- MeiliSearch ---
+      SEARCH: "true"
+      MEILI_HOST: "http://meilisearch:7700"
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-datatalk_meili_dev_key}
+
+      # --- LLM API Keys (set in .env) ---
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+      # --- Secrets ---
+      CREDS_KEY: ${CREDS_KEY:-f34be427ebb29de8d88c107a71546019685ed8b241d8f2ed00c3df97ad2566f0}
+      CREDS_IV: ${CREDS_IV:-e2341419ec3dd3d19b13a1a87fafcbfb}
+      JWT_SECRET: ${JWT_SECRET:-16f8c0ef4a5d391b26034086c628469d3f9f497f08163ab9b40137092f2909ef}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-eaa5191d9c2f78aac2e4e12e87bfb45e42289c9086ab8e5671a10e5b41487a76}
+
+      # --- Config file path (inside container) ---
+      CONFIG_PATH: "/app/librechat.yaml"
+
+    volumes:
+      - ./frontend/librechat.yaml:/app/librechat.yaml:ro
+      - librechat_images:/app/client/public/images
+
+volumes:
+  postgres_data:
+  redis_data:
+  meilisearch_data:
+  librechat_images:

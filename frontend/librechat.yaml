@@ -1,0 +1,130 @@
+# Datatalk V2 — LibreChat Configuration
+#
+# This file configures LibreChat's behavior, endpoints, and integrations.
+# Mounted into the LibreChat container at /app/librechat.yaml.
+#
+# Docs: https://www.librechat.ai/docs/configuration/librechat_yaml
+
+version: "1.3.5"
+cache: true
+
+# -----------------------------------------------------------------------------
+# Interface Customization
+# -----------------------------------------------------------------------------
+interface:
+  # Custom welcome message on the landing page
+  customWelcome: |
+    Welcome to Datatalk — a natural language interface to campaign finance data.
+    Ask questions about candidates, donations, spending, and more.
+
+  privacyPolicy:
+    externalUrl: "https://biglocalnews.org/privacy"
+  termsOfService:
+    externalUrl: "https://biglocalnews.org/terms"
+
+# -----------------------------------------------------------------------------
+# Model Specs — pre-configured model profiles with system prompts
+# -----------------------------------------------------------------------------
+modelSpecs:
+  enforce: false
+  prioritize: true
+  list:
+    # Default profile: Anthropic Claude for campaign finance exploration
+    - name: "datatalk-claude"
+      label: "Datatalk (Claude)"
+      description: >
+        Campaign finance explorer powered by Claude. Ask questions about
+        candidates, donors, spending, and elections.
+      default: true
+      iconURL: "https://cdn.jsdelivr.net/gh/danny-avila/LibreChat@main/docs/assets/anthropic-logo.svg"
+      preset:
+        endpoint: "anthropic"
+        model: "claude-sonnet-4-20250514"
+        temperature: 0.3
+        max_tokens: 4096
+        modelLabel: "Datatalk"
+        greeting: |
+          Hi! I'm Datatalk, a campaign finance research assistant from Big Local News at Stanford.
+
+          I can help you explore federal campaign finance data. Try asking me things like:
+          - "Who are the top donors to Senate races in 2024?"
+          - "How much has the leading presidential candidate raised this cycle?"
+          - "Compare fundraising between the two candidates in the Ohio Senate race"
+          - "What PACs have spent the most on attack ads this year?"
+
+          What would you like to know about campaign finance?
+        promptPrefix: |
+          You are Datatalk, a campaign finance research assistant created by
+          Big Local News at Stanford University. Your purpose is to help
+          journalists, researchers, and the public explore federal campaign
+          finance data.
+
+          IMPORTANT GUIDELINES:
+          - Always cite the data source (FEC filings, OpenSecrets) when presenting numbers.
+          - Include the date range of the data you're referencing.
+          - When data is incomplete or may be stale, say so explicitly.
+          - Distinguish between individual contributions, PAC contributions, and independent expenditures.
+          - Use plain language. Define jargon (e.g., "bundling", "dark money", "super PAC") when first used.
+          - If a question is outside your data coverage, say so rather than speculating.
+          - Present dollar amounts in readable format ($1.2M rather than $1,234,567 for large numbers).
+          - When comparing candidates, be balanced and factual. Do not editorialize.
+
+          You have access to campaign finance tools via MCP. Use them to look up
+          real data before answering. Do not make up numbers.
+
+    # OpenAI alternative for users who prefer GPT
+    - name: "datatalk-openai"
+      label: "Datatalk (GPT-4o)"
+      description: >
+        Campaign finance explorer powered by GPT-4o.
+      iconURL: "https://cdn.jsdelivr.net/gh/danny-avila/LibreChat@main/docs/assets/openai-logo.svg"
+      preset:
+        endpoint: "openAI"
+        model: "gpt-4o"
+        temperature: 0.3
+        max_tokens: 4096
+        modelLabel: "Datatalk"
+        greeting: |
+          Hi! I'm Datatalk, a campaign finance research assistant from Big Local News at Stanford.
+
+          Ask me about candidates, donors, PACs, and campaign spending.
+        promptPrefix: |
+          You are Datatalk, a campaign finance research assistant created by
+          Big Local News at Stanford University. Your purpose is to help
+          journalists, researchers, and the public explore federal campaign
+          finance data.
+
+          IMPORTANT GUIDELINES:
+          - Always cite the data source (FEC filings, OpenSecrets) when presenting numbers.
+          - Include the date range of the data you're referencing.
+          - When data is incomplete or may be stale, say so explicitly.
+          - Distinguish between individual contributions, PAC contributions, and independent expenditures.
+          - Use plain language. Define jargon when first used.
+          - If a question is outside your data coverage, say so rather than speculating.
+          - Present dollar amounts in readable format.
+          - When comparing candidates, be balanced and factual.
+
+          You have access to campaign finance tools via MCP. Use them to look up
+          real data before answering. Do not make up numbers.
+
+# -----------------------------------------------------------------------------
+# MCP Servers — tool providers for campaign finance data
+# -----------------------------------------------------------------------------
+
+# Allow connections to our local MCP server and Docker-internal hostnames.
+mcpSettings:
+  allowedDomains:
+    - "localhost"
+    - "host.docker.internal"
+    - "mcp-server"
+
+mcpServers:
+  # Datatalk MCP Server — campaign finance query engine.
+  # This is a placeholder pointing at the backend MCP server (not yet running).
+  # The MCP server will be implemented in the backend system.
+  datatalk:
+    type: sse
+    url: "http://host.docker.internal:8080/sse"
+    timeout: 60000
+    headers:
+      X-Source: "librechat"
