@@ -9,9 +9,12 @@ Datatalk is a natural language interface to U.S. campaign finance data, built at
 ### Prerequisites
 
 - Docker and Docker Compose
-- Python 3.12+ and [uv](https://docs.astral.sh/uv/)
-- An LLM — either a commercial API key (OpenAI/Anthropic) **or** a local model via [Ollama](https://ollama.com/)
+- Python 3.12+ and [uv]
+- An LLM — either a commercial API key (OpenAI/Anthropic) **or** a local model via [Ollama]
 - PostgreSQL (local or via Docker)
+
+[uv]: https://docs.astral.sh/uv/
+[Ollama]: https://ollama.com/
 
 ### 1. Clone and configure
 
@@ -56,11 +59,11 @@ DATATALK_ENGINE=qwen3:32b
 
 | Model | RAM needed | SQL quality | Speed (M1 Max) | Notes |
 |-------|-----------|-------------|-----------------|-------|
-| `qwen3:8b` | ~5 GB | Acceptable | ~2s | Minimum viable for development |
-| `qwen3:32b` | ~20 GB | Good | ~14s | Recommended for dev with 64 GB RAM. Produces correct multi-table joins. |
 | `qwen3:235b-a22b` | ~16 GB | Very good | ~10s | MoE — 235B total, 22B active. Best quality-per-GB option. |
 | `qwen3:72b` | ~42 GB | Very good | ~35s | Dense 72B. Quality ceiling for 64 GB machines, but slow. |
+| `qwen3:32b` | ~20 GB | Good | ~14s | Recommended for dev with 64 GB RAM. Produces correct multi-table joins. |
 | `qwen3.5:9b` | ~6 GB | Good | ~3s | Newer variant, good quality for its size |
+| `qwen3:8b` | ~5 GB | Acceptable | ~2s | Minimum viable for development |
 
 This uses Ollama's OpenAI-compatible API. The MCP server's SQL translation will work with any model that litellm supports. Use the benchmark suite to measure quality differences between models.
 
