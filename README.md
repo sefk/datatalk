@@ -10,7 +10,7 @@ Datatalk is a natural language interface to U.S. campaign finance data, built at
 
 - Docker and Docker Compose
 - Python 3.12+ and [uv](https://docs.astral.sh/uv/)
-- At least one LLM API key (OpenAI or Anthropic)
+- An LLM — either a commercial API key (OpenAI/Anthropic) **or** a local model via [Ollama](https://ollama.com/)
 - PostgreSQL (local or via Docker)
 
 ### 1. Clone and configure
