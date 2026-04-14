@@ -35,13 +35,14 @@ Run a local model with [Ollama](https://ollama.com/):
 # Install Ollama (macOS)
 brew install ollama
 
-# Start Ollama server
-ollama serve   # runs on http://localhost:11434
+# Start the server and pick a model
+scripts/ollama.sh start qwen3:32b
 
-# In another terminal, pull a model
-ollama pull qwen3:8b     # 8B — minimum viable, ~5 GB RAM
-ollama pull qwen3:32b    # 32B — recommended if you have 64+ GB RAM
+# Or start and choose interactively (requires fzf)
+scripts/ollama.sh start
 ```
+
+The script supports `start`, `stop`, `restart`, and `status`. Logs go to `.tmp/ollama/`.
 
 Then configure `.env` to point at it:
 
@@ -57,6 +58,8 @@ DATATALK_ENGINE=qwen3:32b
 |-------|-----------|-------------|-----------------|-------|
 | `qwen3:8b` | ~5 GB | Acceptable | ~2s | Minimum viable for development |
 | `qwen3:32b` | ~20 GB | Good | ~14s | Recommended for dev with 64 GB RAM. Produces correct multi-table joins. |
+| `qwen3:235b-a22b` | ~16 GB | Very good | ~10s | MoE — 235B total, 22B active. Best quality-per-GB option. |
+| `qwen3:72b` | ~42 GB | Very good | ~35s | Dense 72B. Quality ceiling for 64 GB machines, but slow. |
 | `qwen3.5:9b` | ~6 GB | Good | ~3s | Newer variant, good quality for its size |
 
 This uses Ollama's OpenAI-compatible API. The MCP server's SQL translation will work with any model that litellm supports. Use the benchmark suite to measure quality differences between models.
