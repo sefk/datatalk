@@ -399,8 +399,9 @@ def load_dataset(
 ) -> int:
     """Load a single FEC dataset into PostgreSQL.
 
-    This is idempotent: drops and recreates the table on each run.
-    Uses batch inserts via execute_values for performance.
+    Creates the table if it doesn't exist, then appends data. Uses
+    ON CONFLICT DO NOTHING so loading the same cycle twice is safe,
+    and loading multiple cycles accumulates all the data.
 
     Returns the number of rows inserted.
     """
@@ -412,9 +413,8 @@ def load_dataset(
     cur = conn.cursor()
 
     try:
-        # Drop and recreate table
-        logger.info("Creating table %s", table_name)
-        cur.execute(generate_drop_table_sql(dataset))
+        # Create table if it doesn't exist (no drop — we accumulate data)
+        logger.info("Creating table %s (if not exists)", table_name)
         cur.execute(generate_create_table_sql(dataset))
         conn.commit()
 

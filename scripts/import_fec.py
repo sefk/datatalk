@@ -84,6 +84,11 @@ def parse_args():
         help="Only process specific datasets (by filename: cn, cm, indiv, pas2, ccl)",
     )
     parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Drop and recreate all FEC tables before loading (WARNING: deletes all existing data)",
+    )
+    parser.add_argument(
         "--database-url",
         type=str,
         default=None,
@@ -192,6 +197,23 @@ def main():
 
         print("=== Loading into PostgreSQL ===")
         print(f"Database: {display_url}")
+
+        if args.reset:
+            print("Resetting: dropping all FEC tables...")
+            from backend.datatalk.pipeline.loaders.fec_loader import (
+                generate_drop_table_sql,
+                get_connection,
+                ALL_DATASETS,
+            )
+            conn = get_connection(database_url)
+            conn.autocommit = True
+            cur = conn.cursor()
+            for ds in ALL_DATASETS:
+                cur.execute(generate_drop_table_sql(ds))
+            cur.close()
+            conn.close()
+            print("Tables dropped.\n")
+
         load_start = time.time()
 
         try:
