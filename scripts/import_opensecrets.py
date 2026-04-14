@@ -13,8 +13,9 @@ Usage:
     DATABASE_URL=postgresql://user:pass@localhost/datatalk python scripts/import_opensecrets.py --data-dir ./data/
 
 Environment variables:
-    DATABASE_URL          PostgreSQL connection string (default: postgresql://localhost/datatalk)
-    OPENSECRETS_API_KEY   API key for bulk downloads (required for --download)
+    DATABASE_URL            PostgreSQL connection string (default: postgresql://localhost/datatalk)
+    OPENSECRETS_EMAIL       Account email for bulk downloads
+    OPENSECRETS_PASSWORD    Account password for bulk downloads
 """
 
 import argparse
@@ -107,16 +108,12 @@ def cmd_load(args):
 
 def cmd_download(args):
     """Download bulk data from OpenSecrets and load it."""
-    api_key = args.api_key or os.environ.get("OPENSECRETS_API_KEY", "")
-    if not api_key:
-        console.print(
-            "[red]Error:[/red] OPENSECRETS_API_KEY is required for downloads.\n"
-            "Set the environment variable or pass --api-key."
-        )
-        sys.exit(1)
+    email = args.email or os.environ.get("OPENSECRETS_EMAIL", "")
+    password = args.password or os.environ.get("OPENSECRETS_PASSWORD", "")
 
     config = DownloadConfig(
-        api_key=api_key,
+        email=email,
+        password=password,
         cycle=args.cycle,
         output_dir=args.output_dir,
     )
@@ -131,8 +128,8 @@ def cmd_download(args):
         args.data_dir = args.output_dir
         cmd_load(args)
 
-    except NotImplementedError as e:
-        console.print(f"[yellow]{e}[/yellow]")
+    except ValueError as e:
+        console.print(f"[red]{e}[/red]")
         sys.exit(1)
 
 
@@ -200,13 +197,18 @@ def main():
         help="Election cycle to download (default: 2024)",
     )
     dl_parser.add_argument(
-        "--api-key",
+        "--email",
         default=None,
-        help="OpenSecrets API key (default: OPENSECRETS_API_KEY env var)",
+        help="OpenSecrets account email (default: OPENSECRETS_EMAIL env var)",
+    )
+    dl_parser.add_argument(
+        "--password",
+        default=None,
+        help="OpenSecrets account password (default: OPENSECRETS_PASSWORD env var)",
     )
     dl_parser.add_argument(
         "--output-dir",
-        default="./data/opensecrets",
+        default=".tmp/opensecrets_data",
         help="Directory to save downloaded files",
     )
     dl_parser.add_argument(
@@ -258,8 +260,9 @@ def main():
         cmd_load(args)
     elif args.download:
         # Flat --download shortcut
-        args.api_key = None
-        args.output_dir = "./data/opensecrets"
+        args.email = None
+        args.password = None
+        args.output_dir = ".tmp/opensecrets_data"
         args.batch_size = 1000
         if args.cycle is None:
             args.cycle = 2024

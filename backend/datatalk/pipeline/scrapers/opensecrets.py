@@ -2,19 +2,25 @@
 OpenSecrets bulk data scraper/downloader.
 
 Defines the expected OpenSecrets data schemas and provides functions to:
-- Download bulk data from OpenSecrets (requires API key / researcher access)
+- Download bulk data from OpenSecrets (requires registered account)
 - Load from local CSV files (for development with sample data)
 
 OpenSecrets bulk data: https://www.opensecrets.org/open-data/bulk-data
+Bulk data signup: https://www.opensecrets.org/bulk-data/signup
+
+Authentication: OpenSecrets requires a registered account (email + password)
+to download bulk data.  The API was discontinued in April 2025; downloads
+are session-based via the website.
 """
 
 import csv
 import logging
 import os
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-import requests  # noqa: F401 — will be used once download is implemented
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +111,7 @@ class OpenSecretsDataset:
     table_name: str                  # Postgres table (with opensecrets_ prefix)
     columns: list                    # list of (col_name, pg_type) tuples
     csv_filename: str                # expected CSV filename in the data dir
+    bulk_zip_path: str = ""          # path in bulk download URL, e.g. "CandsCRP/CandsCRP{yy}.zip"
     description: str = ""
 
 
@@ -115,6 +122,7 @@ DATASETS: list[OpenSecretsDataset] = [
         table_name="opensecrets_candidates",
         columns=CANDIDATE_COLUMNS,
         csv_filename="cands.csv",
+        bulk_zip_path="CandsCRP/CandsCRP{yy}.zip",
         description="Enriched candidate records with party, district, winner status",
     ),
     OpenSecretsDataset(
@@ -122,6 +130,7 @@ DATASETS: list[OpenSecretsDataset] = [
         table_name="opensecrets_pacs",
         columns=PAC_COLUMNS,
         csv_filename="pacs.csv",
+        bulk_zip_path="PACs/PACs{yy}.zip",
         description="PAC profiles with industry/ideology classifications",
     ),
     OpenSecretsDataset(
@@ -129,6 +138,7 @@ DATASETS: list[OpenSecretsDataset] = [
         table_name="opensecrets_individual_contributions",
         columns=INDIVIDUAL_CONTRIBUTIONS_COLUMNS,
         csv_filename="indivs.csv",
+        bulk_zip_path="Indivs/Indivs{yy}.zip",
         description="Individual contributions with employer/industry coding",
     ),
     OpenSecretsDataset(
@@ -136,6 +146,7 @@ DATASETS: list[OpenSecretsDataset] = [
         table_name="opensecrets_pac_to_candidates",
         columns=PAC_TO_CANDIDATE_COLUMNS,
         csv_filename="pac_to_cand.csv",
+        bulk_zip_path="PACsToCands/PACsToCands{yy}.zip",
         description="PAC contributions to candidates with industry breakdown",
     ),
 ]
@@ -210,21 +221,96 @@ def find_csv_for_dataset(
 
 
 # ---------------------------------------------------------------------------
-# Downloader (stub — needs API key / researcher access)
+# Downloader — session-based auth via opensecrets.org
 # ---------------------------------------------------------------------------
 
-OPENSECRETS_BULK_URL = "https://www.opensecrets.org/open-data/bulk-data"
+OPENSECRETS_BASE = "https://www.opensecrets.org"
+OPENSECRETS_LOGIN_URL = f"{OPENSECRETS_BASE}/login"
+OPENSECRETS_DOWNLOAD_URL = f"{OPENSECRETS_BASE}/bulk-data/download"
+
+DEFAULT_DATA_DIR = Path(".tmp/opensecrets_data")
 
 
 @dataclass
 class DownloadConfig:
     """Configuration for downloading bulk data from OpenSecrets."""
 
-    api_key: str = ""
-    base_url: str = OPENSECRETS_BULK_URL
+    email: str = ""
+    password: str = ""
     cycle: int = 2024
-    output_dir: str = "./data/opensecrets"
-    timeout: int = 120
+    output_dir: str | Path = DEFAULT_DATA_DIR
+    timeout: int = 300
+
+
+def _login(client: httpx.Client, email: str, password: str) -> None:
+    """Authenticate with OpenSecrets via session cookie.
+
+    Raises ValueError on auth failure.
+    """
+    # GET login page first (for cookies / CSRF)
+    resp = client.get(OPENSECRETS_LOGIN_URL)
+    resp.raise_for_status()
+
+    # POST credentials
+    resp = client.post(
+        OPENSECRETS_LOGIN_URL,
+        data={"email": email, "password": password},
+        follow_redirects=True,
+    )
+    resp.raise_for_status()
+
+    # If we're redirected back to login, auth failed
+    if "/login" in str(resp.url):
+        raise ValueError(
+            "OpenSecrets login failed. Check your email/password.\n"
+            "Sign up for bulk data access at: https://www.opensecrets.org/bulk-data/signup"
+        )
+
+    logger.info("Authenticated with OpenSecrets as %s", email)
+
+
+def _download_zip(
+    client: httpx.Client,
+    dataset: OpenSecretsDataset,
+    cycle: int,
+    out_dir: Path,
+) -> Path:
+    """Download and extract a single dataset zip file."""
+    yy = str(cycle % 100).zfill(2)
+    zip_path_param = dataset.bulk_zip_path.format(yy=yy)
+
+    url = f"{OPENSECRETS_DOWNLOAD_URL}?f={zip_path_param}"
+    zip_file = out_dir / f"{dataset.name}_{yy}.zip"
+
+    logger.info("Downloading %s from %s", dataset.name, url)
+    with client.stream("GET", url) as resp:
+        resp.raise_for_status()
+        with open(zip_file, "wb") as f:
+            for chunk in resp.iter_bytes(chunk_size=65536):
+                f.write(chunk)
+
+    # Extract CSV from zip
+    logger.info("Extracting %s", zip_file.name)
+    csv_path = out_dir / dataset.csv_filename
+    with zipfile.ZipFile(zip_file, "r") as zf:
+        members = zf.namelist()
+        # Find the data file (txt or csv)
+        target = None
+        for m in members:
+            if m.lower().endswith((".txt", ".csv")):
+                target = m
+                break
+        if target is None:
+            raise ValueError(f"No data file found in {zip_file}: {members}")
+
+        zf.extract(target, out_dir)
+        extracted = out_dir / target
+        if extracted != csv_path:
+            extracted.rename(csv_path)
+
+    zip_file.unlink(missing_ok=True)
+    logger.info("Extracted %s (%s)", dataset.name, csv_path)
+    return csv_path
 
 
 def download_bulk_data(
@@ -233,49 +319,44 @@ def download_bulk_data(
 ) -> dict[str, Path]:
     """Download OpenSecrets bulk data CSVs.
 
-    This is currently a stub — actual bulk downloads require researcher
-    access credentials from OpenSecrets.  The function validates the
-    configuration and raises an informative error if the API key is missing.
-
-    Args:
-        config: Download configuration.
-        datasets: List of dataset names to download (default: all).
+    Authenticates with opensecrets.org using email/password, then downloads
+    zip files for the requested cycle.  Credentials can be passed in the
+    config or via environment variables OPENSECRETS_EMAIL and
+    OPENSECRETS_PASSWORD.
 
     Returns:
-        Mapping of dataset name -> downloaded file path.
-
-    Raises:
-        ValueError: If no API key is configured.
-        NotImplementedError: Always, until real download logic is added.
+        Mapping of dataset name -> extracted CSV file path.
     """
-    if not config.api_key:
-        api_key_env = os.environ.get("OPENSECRETS_API_KEY", "")
-        if api_key_env:
-            config.api_key = api_key_env
-        else:
-            raise ValueError(
-                "OpenSecrets API key required. Set OPENSECRETS_API_KEY environment "
-                "variable or pass api_key in DownloadConfig."
-            )
+    email = config.email or os.environ.get("OPENSECRETS_EMAIL", "")
+    password = config.password or os.environ.get("OPENSECRETS_PASSWORD", "")
 
-    target_datasets = datasets or [d.name for d in DATASETS]
+    if not email or not password:
+        raise ValueError(
+            "OpenSecrets credentials required for bulk downloads.\n"
+            "Set OPENSECRETS_EMAIL and OPENSECRETS_PASSWORD environment variables,\n"
+            "or pass them in DownloadConfig.\n\n"
+            "Sign up at: https://www.opensecrets.org/bulk-data/signup\n\n"
+            "Alternatively, download CSV files manually from:\n"
+            "  https://www.opensecrets.org/open-data/bulk-data\n"
+            "and use --data-dir to load them."
+        )
+
+    target_names = set(datasets) if datasets else {d.name for d in DATASETS}
     out_dir = Path(config.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    logger.info(
-        "Downloading OpenSecrets bulk data for cycle %d to %s",
-        config.cycle,
-        out_dir,
-    )
+    results: dict[str, Path] = {}
 
-    # TODO: Implement actual download logic once we have researcher access.
-    # The expected flow is:
-    #   1. Authenticate with OpenSecrets API key
-    #   2. Request bulk data zip for the given cycle
-    #   3. Download and extract CSVs into output_dir
-    #   4. Return mapping of dataset name -> file path
-    raise NotImplementedError(
-        "Bulk download not yet implemented. OpenSecrets researcher access is "
-        "required. For now, place CSV files in the data directory and use "
-        "the --data-dir flag to load them."
-    )
+    with httpx.Client(timeout=config.timeout, follow_redirects=True) as client:
+        _login(client, email, password)
+
+        for ds in DATASETS:
+            if ds.name not in target_names:
+                continue
+            if not ds.bulk_zip_path:
+                logger.warning("No download path for %s, skipping", ds.name)
+                continue
+            csv_path = _download_zip(client, ds, config.cycle, out_dir)
+            results[ds.name] = csv_path
+
+    return results
