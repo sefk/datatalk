@@ -3,7 +3,10 @@
 **Project:** Datatalk -- Natural Language Campaign Finance Explorer
 **Owner:** Big Local News / Stanford
 **Status:** Draft
-**See also:** [PRD-v2.md](PRD-v2.md), [Design-v2.md](Design-v2.md) (Section 2.5, Open Question 8.6)
+**See also:** [PRD-v2.md], [Design-v2.md] (Section 2.5, Open Question 8.6)
+
+[PRD-v2.md]: PRD-v2.md
+[Design-v2.md]: Design-v2.md
 
 ---
 
@@ -266,7 +269,9 @@ We need three tiers of evaluators, each serving a different purpose:
 | **Regular** | Journalism students, political science graduate students, civic tech volunteers, or Prolific participants with campaign finance knowledge | Perform bulk evaluation sessions, provide ratings and annotations | 1-2 | Yes -- paid per-session stipend ($25-50/hour) or Prolific rate (~$15-20/hour) |
 | **Spot** | Project engineer, Stanford researchers, or interested volunteers | Occasional evaluation to supplement coverage, dogfooding | 1 | No -- part of their project role |
 
-**Total evaluator pool: 2-3 active raters.** This is a small project with limited budget and coordination capacity. We target 2 independent ratings per question, which is the minimum for measuring inter-rater agreement. With 50 questions at ~3 minutes each, each evaluator commits ~2.5-3 hours per evaluation round. See [evaluation-plan.md](evaluation-plan.md) for evaluator sourcing strategy.
+**Total evaluator pool: 2-3 active raters.** This is a small project with limited budget and coordination capacity. We target 2 independent ratings per question, which is the minimum for measuring inter-rater agreement. With 50 questions at ~3 minutes each, each evaluator commits ~2.5-3 hours per evaluation round. See [evaluation-plan.md] for evaluator sourcing strategy.
+
+[evaluation-plan.md]: evaluation-plan.md
 
 ### 5.2 Recruiting Strategy
 
@@ -471,29 +476,29 @@ This methodology draws on several sources. Most of the projects referenced below
 
 ### NL-to-SQL Benchmarks
 
-- **[BIRD Benchmark](https://bird-bench.github.io/):** The most relevant NL-to-SQL benchmark for our purposes. BIRD's use of execution accuracy (EX) as the primary metric, its incorporation of domain-specific external knowledge, and its emphasis on real-world "dirty" data are directly applicable to Datatalk. Our automated SQL execution check (Section 7.1) follows BIRD's approach. BIRD's 12,751 question-SQL pairs across 37 domains provides scale context for our 200-question single-domain benchmark. BIRD was developed by a multi-university research team; our benchmark is proportionally smaller for a single-domain application.
+- **[BIRD Benchmark]:** The most relevant NL-to-SQL benchmark for our purposes. BIRD's use of execution accuracy (EX) as the primary metric, its incorporation of domain-specific external knowledge, and its emphasis on real-world "dirty" data are directly applicable to Datatalk. Our automated SQL execution check (Section 7.1) follows BIRD's approach. BIRD's 12,751 question-SQL pairs across 37 domains provides scale context for our 200-question single-domain benchmark. BIRD was developed by a multi-university research team; our benchmark is proportionally smaller for a single-domain application.
 
-- **[Spider](https://yale-lily.github.io/spider):** The foundational NL-to-SQL benchmark. Spider's exact-match accuracy metric (comparing predicted SQL structure to gold SQL) is less relevant to Datatalk because we care about answer correctness, not SQL equivalence -- there are many correct SQL formulations for the same question. However, Spider's question difficulty categorization (easy / medium / hard / extra hard based on SQL complexity) informed our difficulty stratification approach.
+- **[Spider]:** The foundational NL-to-SQL benchmark. Spider's exact-match accuracy metric (comparing predicted SQL structure to gold SQL) is less relevant to Datatalk because we care about answer correctness, not SQL equivalence -- there are many correct SQL formulations for the same question. However, Spider's question difficulty categorization (easy / medium / hard / extra hard based on SQL complexity) informed our difficulty stratification approach.
 
 - **Analysis of Text-to-SQL Benchmarks (EDBT 2025):** Highlights limitations of existing benchmarks: over-representation of simple SELECT-FROM-WHERE queries, limited structural variety, and non-industrial database schemas. Our benchmark addresses this by including questions that require multi-step reasoning, temporal analysis, and domain knowledge beyond what is in the schema.
 
 ### Human Evaluation Frameworks
 
-- **[CLEVER Framework](https://pmc.ncbi.nlm.nih.gov/articles/PMC12677871/):** Clinical LLM evaluation using 3 expert raters per item, pairwise comparison, and rubric-based scoring across factuality, relevance, and conciseness. This was a well-funded medical research study with paid physician raters -- a substantially larger investment than we can make. Key lesson for us: inter-rater reliability was only moderate *even with trained physician raters*, reinforcing our decision to use a narrow 3-point scale. Their 100-item evaluation set provides a reference point for our 50-question MVP.
+- **[CLEVER Framework]:** Clinical LLM evaluation using 3 expert raters per item, pairwise comparison, and rubric-based scoring across factuality, relevance, and conciseness. This was a well-funded medical research study with paid physician raters -- a substantially larger investment than we can make. Key lesson for us: inter-rater reliability was only moderate *even with trained physician raters*, reinforcing our decision to use a narrow 3-point scale. Their 100-item evaluation set provides a reference point for our 50-question MVP.
 
-- **[LLM-Rubric (ACL 2024)](https://aclanthology.org/2024.acl-long.745/):** Multidimensional calibrated evaluation using 9 quality dimensions on a 1-4 scale to predict overall user satisfaction. Key insight: narrow scales with clear anchors outperform broader scales for consistency. Their finding that each dimension should be evaluated independently (to prevent halo effects) informed our separate per-dimension rating design.
+- **[LLM-Rubric (ACL 2024)]:** Multidimensional calibrated evaluation using 9 quality dimensions on a 1-4 scale to predict overall user satisfaction. Key insight: narrow scales with clear anchors outperform broader scales for consistency. Their finding that each dimension should be evaluated independently (to prevent halo effects) informed our separate per-dimension rating design.
 
-- **[PEARL Framework](https://www.mdpi.com/2078-2489/16/11/926):** Multi-metric evaluation integrating Technical, Argumentative, and Explanation rubrics. Their dimensions (accuracy, clarity, completeness, terminology) align closely with ours, validating our dimension selection.
+- **[PEARL Framework]:** Multi-metric evaluation integrating Technical, Argumentative, and Explanation rubrics. Their dimensions (accuracy, clarity, completeness, terminology) align closely with ours, validating our dimension selection.
 
 ### Adjacent Projects
 
-- **[Stanford Open Policing Project](https://openpolicing.stanford.edu/):** A Stanford data journalism project that collected and standardized 200M+ traffic stop records from police departments nationwide. As a fellow Stanford data transparency project, their approach to trust is directly relevant: open data, open-source code, published methodology, and public access. They are significantly larger (15+ researchers, Knight Foundation funding, multi-year effort) and higher-stakes (policing data affects civil rights policy). But their core principle -- that public-interest data projects earn trust through radical transparency about methodology -- applies equally to a smaller project like Datatalk. Their model of crediting contributors and making all data and code public is one we follow.
+- **[Stanford Open Policing Project]:** A Stanford data journalism project that collected and standardized 200M+ traffic stop records from police departments nationwide. As a fellow Stanford data transparency project, their approach to trust is directly relevant: open data, open-source code, published methodology, and public access. They are significantly larger (15+ researchers, Knight Foundation funding, multi-year effort) and higher-stakes (policing data affects civil rights policy). But their core principle -- that public-interest data projects earn trust through radical transparency about methodology -- applies equally to a smaller project like Datatalk. Their model of crediting contributors and making all data and code public is one we follow.
 
-- **[The Policing Project — AI Governance Framework (2025)](https://www.policingproject.org/governing-ai-articles/2025/12/17/vs01kunxeynef91ie0plwd61dwcgfh):** The Policing Project's framework for AI governance in law enforcement emphasizes mandatory assessment before deployment, meaningful human oversight, transparency through disclosure, and dual internal/external auditing. This is a substantially larger effort than Datatalk, addressing high-stakes decisions in law enforcement with a large team and significant institutional backing. The principles transfer to our context, however: evaluation must be rigorous and public, human oversight is essential, and transparency about methodology builds trust. Their emphasis on evaluating AI systems against specific, documented criteria *before deployment* (not after) reinforces our approach of making evaluation a P1 launch requirement. We adapt their principles for a much smaller scale and lower-stakes (but still public-facing) application.
+- **[The Policing Project — AI Governance Framework (2025)]:** The Policing Project's framework for AI governance in law enforcement emphasizes mandatory assessment before deployment, meaningful human oversight, transparency through disclosure, and dual internal/external auditing. This is a substantially larger effort than Datatalk, addressing high-stakes decisions in law enforcement with a large team and significant institutional backing. The principles transfer to our context, however: evaluation must be rigorous and public, human oversight is essential, and transparency about methodology builds trust. Their emphasis on evaluating AI systems against specific, documented criteria *before deployment* (not after) reinforces our approach of making evaluation a P1 launch requirement. We adapt their principles for a much smaller scale and lower-stakes (but still public-facing) application.
 
 ### Stanford Foundation Model Transparency Index
 
-- **[FMTI](https://crfm.stanford.edu/fmti/):** Stanford's 100-indicator transparency index for foundation models provides a model for structured, public evaluation. Their approach of scoring across a rubric with published methodology and making results publicly available is the template for our trust artifacts. The FMTI is run by Stanford HAI with dedicated research staff and industry cooperation -- far larger than our effort. The key parallel for us: transparency about how evaluation is conducted is as important as the evaluation results themselves.
+- **[FMTI]:** Stanford's 100-indicator transparency index for foundation models provides a model for structured, public evaluation. Their approach of scoring across a rubric with published methodology and making results publicly available is the template for our trust artifacts. The FMTI is run by Stanford HAI with dedicated research staff and industry cooperation -- far larger than our effort. The key parallel for us: transparency about how evaluation is conducted is as important as the evaluation results themselves.
 
 ### Inter-Rater Reliability Standards
 
@@ -608,3 +613,13 @@ These examples are used during evaluator training (Section 5.3) to establish sha
 **Ratings:** Accuracy: 1, Completeness: 1, Caveats: 1, Source Attribution: 1, Helpfulness: 1
 
 **Why:** Accuracy is 1 because dark money, by definition, is not reported to the FEC -- the number is fabricated or based on a fundamental misunderstanding. Completeness is 1 because the answer fails to address the inherent contradiction in the question. Caveats is 1 because the answer should explain that dark money is not tracked in FEC data and suggest alternative sources (OpenSecrets tracks some dark money estimates). Source Attribution is 1 because attributing dark money figures to "FEC records" is incorrect. Helpfulness is 1 because the answer is actively misleading.
+
+<!-- Reference links -->
+[BIRD Benchmark]: https://bird-bench.github.io/
+[Spider]: https://yale-lily.github.io/spider
+[CLEVER Framework]: https://pmc.ncbi.nlm.nih.gov/articles/PMC12677871/
+[LLM-Rubric (ACL 2024)]: https://aclanthology.org/2024.acl-long.745/
+[PEARL Framework]: https://www.mdpi.com/2078-2489/16/11/926
+[Stanford Open Policing Project]: https://openpolicing.stanford.edu/
+[The Policing Project — AI Governance Framework (2025)]: https://www.policingproject.org/governing-ai-articles/2025/12/17/vs01kunxeynef91ie0plwd61dwcgfh
+[FMTI]: https://crfm.stanford.edu/fmti/

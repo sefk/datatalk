@@ -1,6 +1,8 @@
 # Evaluation Plan: Evaluator Sourcing
 
-**See also:** [evaluation-methodology.md](evaluation-methodology.md) (rating dimensions, workflow, question design)
+**See also:** [evaluation-methodology.md] (rating dimensions, workflow, question design)
+
+[evaluation-methodology.md]: evaluation-methodology.md
 
 ---
 
@@ -35,7 +37,9 @@ Post short evaluation gigs targeting people with relevant backgrounds. This is o
 
 ### 2. Prolific
 
-[Prolific](https://www.prolific.com/) is a research-grade crowdsourcing platform with better quality controls than Mechanical Turk. The key advantage: **pre-screening filters**.
+[Prolific] is a research-grade crowdsourcing platform with better quality controls than Mechanical Turk. The key advantage: **pre-screening filters**.
+
+[Prolific]: https://www.prolific.com/
 
 **How to use it:**
 
@@ -80,7 +84,7 @@ All evaluators, regardless of source, must pass qualification before rating prod
 ### Training (~30 minutes, async)
 
 1. A 1-page summary of Datatalk's data sources and known limitations
-2. The rating rubric with scale definitions (from [evaluation-methodology.md](evaluation-methodology.md))
+2. The rating rubric with scale definitions (from [evaluation-methodology.md])
 3. Five worked examples with commentary explaining why each dimension received its score (see Appendix B of the methodology doc)
 
 ### Qualification test (10 questions, must score 8/10)

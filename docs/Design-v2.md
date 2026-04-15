@@ -4,7 +4,9 @@
 **Owner:** Big Local News / Stanford  
 **Author:** Sef Kloninger <sefklon@gmail.com>
 **Status:** Draft  
-**See also:** [PRD-V2.md](PRD-V2.md)
+**See also:** [PRD-V2.md]
+
+[PRD-V2.md]: PRD-V2.md
 
 ---
 
