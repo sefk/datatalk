@@ -247,9 +247,9 @@ Rationale for 50 (MVP):
 
 ### 4.4 Benchmark Update Cadence
 
-- **Quarterly review.** Every 3 months, review the benchmark set for staleness. Questions that reference specific candidates or races become stale as election cycles change.
-- **Post-data-update regression.** After each major data import (new election cycle data, new data source), run the full automated benchmark. This is automated and does not require human re-evaluation unless regressions are detected.
-- **Annual refresh.** Once per year (after each major election cycle), retire 20-30% of questions that are no longer relevant and replace with new questions reflecting the current political landscape.
+- **Human evaluation rounds: 1-2 per year.** Conduct a full human evaluation round to re-certify the system after significant changes (model upgrades, new data sources, major prompt revisions). Each round follows the sprint process in Section 5.4.
+- **Automated regression checks: continuous.** After each major data import or code change, run the automated benchmark (Section 7.1). This requires no human effort and catches regressions between evaluation rounds.
+- **Annual refresh.** Once per year (after each major election cycle), retire 20-30% of questions that are no longer relevant and replace with new questions reflecting the current political landscape. Questions that reference specific candidates or races become stale as election cycles change.
 - **Append, don't replace.** Retired questions are archived, not deleted. This allows longitudinal comparison of system quality over time.
 
 ---
@@ -262,11 +262,11 @@ We need three tiers of evaluators, each serving a different purpose:
 
 | Tier | Who | Role | Count Needed | Paid? |
 |------|-----|------|-------------|-------|
-| **Core** | Hired domain expert(s) -- campaign finance analysts, political scientists, or experienced political journalists | Write gold-standard answers, adjudicate disagreements, validate the benchmark set, provide corrections that feed back into domain knowledge | 1-2 | Yes -- part of their domain expert role (budgeted in PRD) |
-| **Regular** | Journalism students, political science graduate students, or civic tech volunteers with campaign finance knowledge | Perform bulk evaluation sessions, provide ratings and annotations | 3-5 | Yes -- paid per-session stipend ($25-50/hour or per-question micro-payment of $1-2/question) |
-| **Spot** | Project engineers, Stanford researchers, or interested volunteers | Occasional evaluation to supplement coverage, dogfooding | 2-3 | No -- part of their project role |
+| **Core** | Hired domain expert (campaign finance analyst, political scientist, or experienced political journalist) | Write gold-standard answers, adjudicate disagreements, validate the benchmark set, provide corrections that feed back into domain knowledge | 1 | Yes -- part of their domain expert role (budgeted in PRD) |
+| **Regular** | Journalism students, political science graduate students, civic tech volunteers, or Prolific participants with campaign finance knowledge | Perform bulk evaluation sessions, provide ratings and annotations | 1-2 | Yes -- paid per-session stipend ($25-50/hour) or Prolific rate (~$15-20/hour) |
+| **Spot** | Project engineer, Stanford researchers, or interested volunteers | Occasional evaluation to supplement coverage, dogfooding | 1 | No -- part of their project role |
 
-**Total evaluator pool: 6-10 people.** At any given time, we need at least 3-4 active evaluators to maintain the target of 50+ evaluated question-answer pairs per week (PRD Section 8).
+**Total evaluator pool: 2-3 active raters.** This is a small project with limited budget and coordination capacity. We target 2 independent ratings per question, which is the minimum for measuring inter-rater agreement. With 50 questions at ~3 minutes each, each evaluator commits ~2.5-3 hours per evaluation round. See [evaluation-plan.md](evaluation-plan.md) for evaluator sourcing strategy.
 
 ### 5.2 Recruiting Strategy
 
@@ -298,30 +298,30 @@ We need three tiers of evaluators, each serving a different purpose:
 
 3. **Solo practice (30 min, async).** Evaluator independently rates 10 question-answer pairs from the calibration set (different from the 10 discussed in the group session). Their ratings are compared to the core evaluator's ratings. If agreement is below 70% (exact match on 3-point scale), the evaluator gets additional coaching before joining the production pool.
 
-4. **Ongoing calibration.** Every month, include 5 "calibration questions" (pre-rated by core evaluators) in each evaluator's session without flagging them. This provides continuous monitoring of inter-rater reliability without disrupting the workflow.
+4. **Calibration during evaluation rounds.** Include 3-5 "calibration questions" (pre-rated by the core evaluator) in each evaluation session without flagging them. This verifies inter-rater reliability within that round.
 
-### 5.4 Timeline to Onboard
+### 5.4 Evaluation Cadence
+
+We expect to conduct human evaluation rounds **once or twice per year** -- typically to re-certify the system after significant model changes, data source additions, or prompt revisions. Each round is a focused sprint:
 
 | Milestone | Time from Start |
 |-----------|----------------|
-| Post recruiting notices, identify candidates | Week 1 |
-| Screen and select 4-6 regular evaluators | Week 2-3 |
-| Develop training materials and example evaluations | Week 2-3 (parallel) |
-| Conduct calibration session | Week 4 |
-| Solo practice and coaching | Week 4-5 |
-| First production evaluation session | Week 5-6 |
-| MVP evaluation complete (50 questions x 2 raters) | Week 7-8 |
+| Recruit / re-engage evaluators | Week 1 |
+| Training or refresher (if new evaluators) | Week 1-2 |
+| Run automated benchmark | Week 2 |
+| Human evaluation session (50 questions x 2 raters) | Week 2-3 |
+| Analyze results, publish updated trust artifact | Week 3-4 |
 
-**Realistic total: 6-8 weeks from decision to first publishable results.** The critical path is evaluator recruiting and training, not technology. The evaluation interface can be a minimal Django admin-style form for the MVP (see Section 6).
+**Realistic total: 3-4 weeks per round** if evaluators are already trained. First round takes longer (5-6 weeks) due to initial recruiting and training. The evaluation interface can be a minimal Django admin-style form, Google Form, or Prolific study for the MVP (see Section 6).
 
 ### 5.5 Retention
 
-Evaluator retention is the biggest operational risk. Mitigation strategies:
+With only 1-2 evaluation rounds per year, ongoing retention is less critical than for a continuous evaluation program. But we still want evaluators willing to return for future rounds:
 
-- **Keep sessions short.** 45-75 minutes maximum. Do not ask evaluators to grind through hundreds of questions in a marathon.
-- **Pay fairly and promptly.** Benchmarked at $25-50/hour for regular evaluators, paid within 2 weeks of the session.
-- **Show impact.** Share aggregate results with evaluators. Show them how their feedback improved the system. People who see their work making a difference are more likely to continue.
-- **Maintain a bench.** Always have 2-3 more evaluators in the trained pool than are needed for any given sprint. Expect 30-40% attrition per quarter.
+- **Keep sessions short.** Each round is ~3 hours of evaluation work, not a multi-week grind.
+- **Credit contributors publicly.** List evaluators by name on the Datatalk website (with their permission). Evaluators are likely part of the campaign finance or journalism community and would be proud to have their contribution visible.
+- **Show impact.** Share aggregate results with evaluators. Show them how their feedback improved the system.
+- **Pay fairly.** Benchmarked at $25-50/hour for regular evaluators, or Prolific's recommended rate (~$15-20/hour) for platform-sourced raters.
 
 ---
 
@@ -334,7 +334,7 @@ The MVE is the smallest evaluation that produces a credible, publishable trust a
 | Parameter | MVE Target |
 |-----------|-----------|
 | Benchmark questions | 50 |
-| Evaluators | 3 (1 core + 2 regular) |
+| Evaluators | 2-3 (1 core + 1-2 regular) |
 | Ratings per question | 2 (each question rated by 2 evaluators) |
 | Dimensions rated | All 5 |
 | Gold-standard answers | At least 25 (50% of questions) |
@@ -353,7 +353,7 @@ The MVE produces a statement suitable for the Datatalk "About" page:
 > - **Appropriate caveats:** Y% of out-of-scope questions were correctly identified with appropriate caveats.
 > - **Source attribution:** Z% of answers included specific, verifiable source citations.
 >
-> Evaluation methodology is [published here](link). The benchmark set is refreshed quarterly. Last evaluation: [date].
+> Evaluation methodology is [published here](link). Last evaluation: [date].
 
 ### 6.3 What the MVE Does Not Include
 
@@ -467,11 +467,11 @@ Benchmark question set
 
 ## 8. References and Prior Art
 
-This methodology draws on several sources:
+This methodology draws on several sources. Most of the projects referenced below operate at significantly larger scale and budget than Datatalk. We note scale and cost context where known, as our methodology must be right-sized for a small team (1 engineer, 1 domain expert, 1-2 evaluators) with modest funding.
 
 ### NL-to-SQL Benchmarks
 
-- **[BIRD Benchmark](https://bird-bench.github.io/):** The most relevant NL-to-SQL benchmark for our purposes. BIRD's use of execution accuracy (EX) as the primary metric, its incorporation of domain-specific external knowledge, and its emphasis on real-world "dirty" data are directly applicable to Datatalk. Our automated SQL execution check (Section 7.1) follows BIRD's approach. BIRD's 12,751 question-SQL pairs across 37 domains provides scale context for our 200-question single-domain benchmark.
+- **[BIRD Benchmark](https://bird-bench.github.io/):** The most relevant NL-to-SQL benchmark for our purposes. BIRD's use of execution accuracy (EX) as the primary metric, its incorporation of domain-specific external knowledge, and its emphasis on real-world "dirty" data are directly applicable to Datatalk. Our automated SQL execution check (Section 7.1) follows BIRD's approach. BIRD's 12,751 question-SQL pairs across 37 domains provides scale context for our 200-question single-domain benchmark. BIRD was developed by a multi-university research team; our benchmark is proportionally smaller for a single-domain application.
 
 - **[Spider](https://yale-lily.github.io/spider):** The foundational NL-to-SQL benchmark. Spider's exact-match accuracy metric (comparing predicted SQL structure to gold SQL) is less relevant to Datatalk because we care about answer correctness, not SQL equivalence -- there are many correct SQL formulations for the same question. However, Spider's question difficulty categorization (easy / medium / hard / extra hard based on SQL complexity) informed our difficulty stratification approach.
 
@@ -479,23 +479,25 @@ This methodology draws on several sources:
 
 ### Human Evaluation Frameworks
 
-- **[CLEVER Framework](https://pmc.ncbi.nlm.nih.gov/articles/PMC12677871/):** Clinical LLM evaluation using 3 expert raters per item, pairwise comparison, and rubric-based scoring across factuality, relevance, and conciseness. Key lesson: inter-rater reliability was only moderate even with trained physician raters, reinforcing our decision to use a narrow 3-point scale and require calibration training. Their 100-item evaluation set and use of external contractors informed our MVE sizing.
+- **[CLEVER Framework](https://pmc.ncbi.nlm.nih.gov/articles/PMC12677871/):** Clinical LLM evaluation using 3 expert raters per item, pairwise comparison, and rubric-based scoring across factuality, relevance, and conciseness. This was a well-funded medical research study with paid physician raters -- a substantially larger investment than we can make. Key lesson for us: inter-rater reliability was only moderate *even with trained physician raters*, reinforcing our decision to use a narrow 3-point scale. Their 100-item evaluation set provides a reference point for our 50-question MVP.
 
 - **[LLM-Rubric (ACL 2024)](https://aclanthology.org/2024.acl-long.745/):** Multidimensional calibrated evaluation using 9 quality dimensions on a 1-4 scale to predict overall user satisfaction. Key insight: narrow scales with clear anchors outperform broader scales for consistency. Their finding that each dimension should be evaluated independently (to prevent halo effects) informed our separate per-dimension rating design.
 
 - **[PEARL Framework](https://www.mdpi.com/2078-2489/16/11/926):** Multi-metric evaluation integrating Technical, Argumentative, and Explanation rubrics. Their dimensions (accuracy, clarity, completeness, terminology) align closely with ours, validating our dimension selection.
 
-### The Policing Project
+### Adjacent Projects
 
-- **[AI Governance Framework (2025)](https://www.policingproject.org/governing-ai-articles/2025/12/17/vs01kunxeynef91ie0plwd61dwcgfh):** The Policing Project's framework for AI governance in law enforcement emphasizes mandatory assessment before deployment, meaningful human oversight, transparency through disclosure, and dual internal/external auditing. While their domain (policing) is different from ours (campaign finance), the principles transfer: evaluation must be rigorous and public, human oversight is essential, and transparency about methodology builds trust. Their emphasis on evaluating AI systems against specific, documented criteria before deployment (not after) reinforces our approach of making evaluation a P1 launch requirement.
+- **[Stanford Open Policing Project](https://openpolicing.stanford.edu/):** A Stanford data journalism project that collected and standardized 200M+ traffic stop records from police departments nationwide. As a fellow Stanford data transparency project, their approach to trust is directly relevant: open data, open-source code, published methodology, and public access. They are significantly larger (15+ researchers, Knight Foundation funding, multi-year effort) and higher-stakes (policing data affects civil rights policy). But their core principle -- that public-interest data projects earn trust through radical transparency about methodology -- applies equally to a smaller project like Datatalk. Their model of crediting contributors and making all data and code public is one we follow.
+
+- **[The Policing Project — AI Governance Framework (2025)](https://www.policingproject.org/governing-ai-articles/2025/12/17/vs01kunxeynef91ie0plwd61dwcgfh):** The Policing Project's framework for AI governance in law enforcement emphasizes mandatory assessment before deployment, meaningful human oversight, transparency through disclosure, and dual internal/external auditing. This is a substantially larger effort than Datatalk, addressing high-stakes decisions in law enforcement with a large team and significant institutional backing. The principles transfer to our context, however: evaluation must be rigorous and public, human oversight is essential, and transparency about methodology builds trust. Their emphasis on evaluating AI systems against specific, documented criteria *before deployment* (not after) reinforces our approach of making evaluation a P1 launch requirement. We adapt their principles for a much smaller scale and lower-stakes (but still public-facing) application.
 
 ### Stanford Foundation Model Transparency Index
 
-- **[FMTI](https://crfm.stanford.edu/fmti/):** Stanford's 100-indicator transparency index for foundation models provides a model for structured, public evaluation. Their approach of scoring across a rubric with published methodology and making results publicly available is the template for our trust artifacts. The key parallel: transparency about how evaluation is conducted is as important as the evaluation results themselves.
+- **[FMTI](https://crfm.stanford.edu/fmti/):** Stanford's 100-indicator transparency index for foundation models provides a model for structured, public evaluation. Their approach of scoring across a rubric with published methodology and making results publicly available is the template for our trust artifacts. The FMTI is run by Stanford HAI with dedicated research staff and industry cooperation -- far larger than our effort. The key parallel for us: transparency about how evaluation is conducted is as important as the evaluation results themselves.
 
 ### Inter-Rater Reliability Standards
 
-- Studies consistently recommend 30-50 items minimum with 3-5 raters for reliable kappa estimates. Our MVE (50 questions, 2-3 raters) is at the lower bound; the full benchmark (200 questions, 2+ raters) provides robust measurement. Target kappa of 0.60+ (substantial agreement) is appropriate for subjective quality ratings with a narrow scale.
+- Studies consistently recommend 30-50 items minimum with 3-5 raters for reliable kappa estimates. Our MVE (50 questions, 2 raters) is at the lower bound of statistical validity; with a small evaluator pool, we prioritize careful calibration over volume. Target kappa of 0.60+ (substantial agreement) is appropriate for subjective quality ratings with a narrow scale.
 
 ---
 
